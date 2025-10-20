@@ -1,15 +1,10 @@
 import { sound } from '@pixi/sound';
+import { soundAssets } from '../generated/AssetBundle';
 
 export class SoundManager {
-    private static sounds: { alias: string, src: string }[] = [
-        { alias: 'test_sound', src: 'assets/sounds/test_sound.wav' },
-        // { alias: 'shot', src: 'assets/sounds/shot.wav' },
-        // { alias: 'explosion', src: 'assets/sounds/explosion.wav' },
-    ];
-
     public static async init(): Promise<void> {
         const soundMap: Record<string, string> = {};
-        for (const soundInfo of this.sounds) {
+        for (const soundInfo of soundAssets) {
             soundMap[soundInfo.alias] = soundInfo.src;
         }
         sound.add(soundMap);

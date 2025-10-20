@@ -1,46 +1,44 @@
-const { createCanvas } = require('canvas');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
-const { WaveFile } = require('wavefile');
 
-const assetsDir = path.join(__dirname, '..', 'assets');
-const imagesDir = path.join(assetsDir, 'images');
-const soundsDir = path.join(assetsDir, 'sounds');
+const assetsDir = path.resolve(__dirname, '../assets');
+const outputDir = path.resolve(__dirname, '../src/generated');
+const outputFile = path.join(outputDir, 'AssetBundle.ts');
 
-function generatePlayerImage() {
-    const canvas = createCanvas(32, 32);
-    const ctx = canvas.getContext('2d');
+async function generateAssetBundle() {
+    try {
+        const imageDir = path.join(assetsDir, 'images');
+        const soundDir = path.join(assetsDir, 'sounds');
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(0, 0, 32, 32);
+        const imageFiles = await fs.readdir(imageDir);
+        const soundFiles = await fs.readdir(soundDir);
 
-    const buffer = canvas.toBuffer('image/png');
-    fs.writeFileSync(path.join(imagesDir, 'player.png'), buffer);
-    console.log('Generated player.png');
-}
+        const imageAssets = imageFiles.map(file => ({
+            alias: path.parse(file).name,
+            src: `assets/images/${file}`
+        }));
 
-function generateTestSound() {
-    const wav = new WaveFile();
-    const duration = 0.5; // seconds
-    const sampleRate = 44100;
-    const numSamples = Math.floor(duration * sampleRate);
-    const samples = new Int16Array(numSamples);
+        const soundAssets = soundFiles.map(file => ({
+            alias: path.parse(file).name,
+            src: `assets/sounds/${file}`
+        }));
 
-    const frequency = 440; // A4 note
-    for (let i = 0; i < numSamples; i++) {
-        samples[i] = Math.sin(2 * Math.PI * frequency * (i / sampleRate)) * 32767;
+        const content = `// This file is generated automatically. Do not edit.
+
+export const imageAssets = ${JSON.stringify(imageAssets, null, 4)};
+
+export const soundAssets = ${JSON.stringify(soundAssets, null, 4)};
+`;
+
+        await fs.ensureDir(outputDir);
+        await fs.writeFile(outputFile, content);
+
+        console.log('Asset bundle generated successfully!');
+
+    } catch (error) {
+        console.error('Error generating asset bundle:', error);
+        process.exit(1);
     }
-
-    wav.fromScratch(1, sampleRate, '16', samples);
-    fs.writeFileSync(path.join(soundsDir, 'test_sound.wav'), wav.toBuffer());
-    console.log('Generated test_sound.wav');
 }
 
-// Create directories if they don't exist
-if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
-if (!fs.existsSync(soundsDir)) fs.mkdirSync(soundsDir, { recursive: true });
-
-generatePlayerImage();
-generateTestSound();
-
-console.log('Dummy assets generated successfully.');
+generateAssetBundle();
