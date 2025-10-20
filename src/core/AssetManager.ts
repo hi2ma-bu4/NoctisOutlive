@@ -1,20 +1,10 @@
 import * as PIXI from 'pixi.js';
+import { imageAssets } from '../generated/AssetBundle';
 
 export class AssetManager {
-    private static bundles: { name: string, assets: { alias: string, src: string }[] }[] = [
-        {
-            name: 'game-assets',
-            assets: [
-                { alias: 'player', src: 'assets/images/player.png' },
-                // { alias: 'enemy', src: 'assets/images/enemy.png' },
-            ],
-        },
-    ];
-
     public static async init(): Promise<void> {
-        for (const bundle of this.bundles) {
-            PIXI.Assets.addBundle(bundle.name, bundle.assets);
-        }
+        const assets = imageAssets.map(asset => ({ alias: asset.alias, src: asset.src }));
+        PIXI.Assets.addBundle('game-assets', assets);
     }
 
     public static async loadBundle(bundleName: string): Promise<Record<string, PIXI.Texture>> {

@@ -1,7 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { AssetManager } from './AssetManager';
 import { SoundManager } from './SoundManager';
-import { Player } from '../game/Player';
+import { SceneManager } from './SceneManager';
+import { StageSelectScene } from '../game/scenes/StageSelectScene';
+import { InputManager } from './InputManager';
+import { UIManager } from './UIManager';
+import { EffectManager } from './EffectManager';
 
 export class Game {
     private app: PIXI.Application;
@@ -14,6 +18,7 @@ export class Game {
     private async init() {
         await AssetManager.init();
         await SoundManager.init();
+        InputManager.init();
 
         await this.app.init({
             width: window.innerWidth,
@@ -30,27 +35,30 @@ export class Game {
             return;
         }
 
-        await this.loadAssets();
+        SceneManager.init(this.app);
+        UIManager.init(this.app);
+        SceneManager.onSceneChange = (newScene) => {
+            EffectManager.init(newScene.container);
+        };
+
+        // Load assets and change to the first scene
+        await this.loadAssetsAndStart();
 
         // Start the game loop
         this.app.ticker.add(delta => this.update(delta));
     }
 
-    private async loadAssets() {
-        const textures = await AssetManager.loadBundle('game-assets');
-
-        const playerTexture = textures['player'];
-        if (playerTexture) {
-            const player = new Player(playerTexture);
-            player.x = this.app.screen.width / 2;
-            player.y = this.app.screen.height / 2;
-            this.app.stage.addChild(player);
-        }
-
+    private async loadAssetsAndStart() {
+        await AssetManager.loadBundle('game-assets');
         SoundManager.play('test_sound', true);
+
+        const stageSelectScene = new StageSelectScene();
+        SceneManager.changeScene(stageSelectScene);
     }
 
     private update(delta: PIXI.Ticker) {
-        // Game logic goes here
+        SceneManager.update(delta);
+        UIManager.update(delta.deltaTime);
+        EffectManager.update(delta.deltaTime);
     }
 }

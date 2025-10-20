@@ -1,6 +1,7 @@
 const esbuild = require('esbuild');
 const fs = require('fs-extra');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const srcDir = 'src';
 const distDir = 'dist';
@@ -8,10 +9,14 @@ const assetsDir = 'assets';
 
 async function build() {
   try {
+    // Generate asset bundle
+    console.log('Generating asset bundle...');
+    execSync('node scripts/generate_assets.js', { stdio: 'inherit' });
+
     // Clean the dist directory
     await fs.emptyDir(distDir);
 
-    // Build TypeScript
+    // Build main TypeScript
     await esbuild.build({
       entryPoints: [path.join(srcDir, 'main.ts')],
       bundle: true,
@@ -21,6 +26,23 @@ async function build() {
       target: 'esnext',
       platform: 'browser',
     });
+
+    // Build Web Workers
+    const workerDir = path.join(srcDir, 'workers');
+    const workerFiles = await fs.readdir(workerDir);
+    for (const file of workerFiles) {
+      if (file.endsWith('.ts')) {
+        await esbuild.build({
+          entryPoints: [path.join(workerDir, file)],
+          bundle: true,
+          outfile: path.join(distDir, 'workers', file.replace('.ts', '.js')),
+          sourcemap: true,
+          minify: true,
+          target: 'esnext',
+          format: 'iife',
+        });
+      }
+    }
 
     console.log('TypeScript build successful.');
 
