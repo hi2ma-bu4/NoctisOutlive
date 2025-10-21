@@ -1,93 +1,60 @@
 // src/workers/CollisionWorker.ts
 
-interface GameObject {
-    id: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+// Define types that match the main thread and Rust lib
+// These must be kept in sync manually.
+enum CollidableType {
+    Player,
+    Enemy,
+    Projectile,
+    ExperienceOrb,
+    TreasureChest,
 }
 
-interface PlayerObject extends GameObject {
-    pickupRadius: number;
+interface CollisionEvent {
+    type_a: CollidableType;
+    id_a: number;
+    type_b: CollidableType;
+    id_b: number;
 }
 
-enum CollisionType {
-    PROJECTILE_ENEMY = 'projectile-enemy',
-    PLAYER_ENEMY = 'player-enemy',
-    PLAYER_EXP_ORB = 'player-exp-orb',
-    PLAYER_TREASURE = 'player-treasure',
-}
+// A type guard to ensure the imported module has the functions we expect.
+type WasmCollisionModule = {
+    detect_collisions: (state: any) => CollisionEvent[];
+};
 
-interface CollisionResult {
-    type: CollisionType;
-    a: number; // ID of the first object
-    b: number; // ID of the second object
-}
+let wasm: WasmCollisionModule | null = null;
 
-// Simple Axis-Aligned Bounding Box check
-function checkCollision(objA: GameObject, objB: GameObject): boolean {
-    // Using circular collision for better feel
-    const dx = objA.x - objB.x;
-    const dy = objA.y - objB.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < (objA.width / 2) + (objB.width / 2);
-}
-
-// Check for collision within a larger radius (for pickups)
-function checkRadiusCollision(player: PlayerObject, item: GameObject): boolean {
-    const dx = player.x - item.x;
-    const dy = player.y - item.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < player.pickupRadius;
-}
-
-
-self.onmessage = (event: MessageEvent) => {
-    const { player, enemies, projectiles, expOrbs, treasureChests } = event.data;
-    const collisions: CollisionResult[] = [];
-
-    // 1. Projectiles vs Enemies
-    if (projectiles && enemies) {
-        for (const projectile of projectiles) {
-            for (const enemy of enemies) {
-                if (checkCollision(projectile, enemy)) {
-                    collisions.push({ type: CollisionType.PROJECTILE_ENEMY, a: projectile.id, b: enemy.id });
-                    // Assume a projectile can only hit one enemy
-                    break;
-                }
-            }
+// The main message handler for the worker
+self.onmessage = async (event: MessageEvent) => {
+    // The first message should contain the path to the WASM module for initialization.
+    if (event.data.type === 'init') {
+        try {
+            // The path is relative to the final worker script in `dist/workers`
+            wasm = await import(event.data.wasmPath) as WasmCollisionModule;
+            self.postMessage({ type: 'init_done' });
+            console.log("Collision worker WASM module loaded successfully.");
+        } catch (e) {
+            console.error("Collision worker failed to load WASM:", e);
+            self.postMessage({ type: 'init_error', error: e });
         }
+        return;
     }
 
-    // 2. Player vs Enemies
-    if (player && enemies) {
-        for (const enemy of enemies) {
-            if (checkCollision(player, enemy)) {
-                collisions.push({ type: CollisionType.PLAYER_ENEMY, a: player.id, b: enemy.id });
-            }
-        }
-    }
+    // Subsequent messages are for collision detection.
+    if (event.data.type === 'detect' && wasm) {
+        try {
+            const gameState = event.data.gameState;
+            const results: CollisionEvent[] = wasm.detect_collisions(gameState);
 
-    // 3. Player vs Experience Orbs (using pickup radius)
-    if (player && expOrbs) {
-        for (const orb of expOrbs) {
-            if (checkRadiusCollision(player, orb)) {
-                collisions.push({ type: CollisionType.PLAYER_EXP_ORB, a: player.id, b: orb.id });
+            if (results.length > 0) {
+                // Transferable objects could be used here for performance if needed,
+                // but the result arrays are typically small.
+                self.postMessage({ type: 'collisions', collisions: results });
             }
+        } catch (error) {
+            // If the WASM call fails, report it back to the main thread.
+            console.error("Error during WASM collision detection in worker:", error);
+            self.postMessage({ type: 'runtime_error', error });
         }
-    }
-
-    // 4. Player vs Treasure Chests
-    if (player && treasureChests) {
-        for (const chest of treasureChests) {
-            if (checkCollision(player, chest)) {
-                collisions.push({ type: CollisionType.PLAYER_TREASURE, a: player.id, b: chest.id });
-            }
-        }
-    }
-
-    if (collisions.length > 0) {
-        self.postMessage({ collisions });
     }
 };

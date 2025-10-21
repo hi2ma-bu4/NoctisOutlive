@@ -5,24 +5,10 @@ import { EnemyManager } from '../game/EnemyManager';
 import { WeaponManager } from '../game/WeaponManager';
 import { ExperienceManager } from '../game/ExperienceManager';
 import { TreasureManager } from '../game/TreasureManager';
-import { BaseEnemy } from '../game/BaseEnemy';
 
-// Type definition for the WASM module's exports
-type WasmCollisionModule = {
-    init: () => Promise<void>;
-    detect_collisions: (state: any) => any;
-};
-
-// Type definitions for data structures matching Rust's
-interface Point { x: number; y: number; }
-interface GameObject { id: number; position: Point; radius: number; }
-interface GameState {
-    player: GameObject;
-    enemies: GameObject[];
-    projectiles: GameObject[];
-    orbs: GameObject[];
-    chests: GameObject[];
-}
+// Duplicating these enums/interfaces is necessary because the worker
+// cannot import them directly from the main thread's scope.
+// It's crucial to keep these in sync with the worker and Rust code.
 enum CollidableType {
     Player,
     Enemy,
@@ -37,7 +23,6 @@ interface CollisionEvent {
     id_b: number;
 }
 
-
 export class CollisionManager {
     private player: Player;
     private enemyManager: EnemyManager;
@@ -45,8 +30,9 @@ export class CollisionManager {
     private experienceManager: ExperienceManager;
     private treasureManager: TreasureManager;
 
-    private wasm: WasmCollisionModule | null = null;
+    private worker: Worker | null = null;
     private isReady: boolean = false;
+    private updatePending: boolean = false;
 
     constructor(
         player: Player,
@@ -61,30 +47,55 @@ export class CollisionManager {
         this.experienceManager = experienceManager;
         this.treasureManager = treasureManager;
 
-        this.loadWasm();
+        this.initializeWorker();
     }
 
-    private async loadWasm(): Promise<void> {
+    private initializeWorker(): void {
         try {
-            // The path is relative to the final HTML file in `dist`
-            this.wasm = await import('../pkg/collision_logic.js') as WasmCollisionModule;
-            // The `init` function is often needed to load the .wasm file itself.
-            // Depending on the wasm-pack output, this might not be necessary if using a bundler that handles it.
-            // await this.wasm.init();
-            this.isReady = true;
-            console.log("WebAssembly collision module loaded successfully.");
+            this.worker = new Worker(new URL('../workers/CollisionWorker.ts', import.meta.url), {
+                type: 'module'
+            });
+
+            this.worker.onmessage = (event: MessageEvent) => {
+                switch (event.data.type) {
+                    case 'init_done':
+                        this.isReady = true;
+                        console.log("Collision worker is ready.");
+                        break;
+                    case 'collisions':
+                        this.processCollisions(event.data.collisions);
+                        this.updatePending = false;
+                        break;
+                    case 'init_error':
+                    case 'runtime_error':
+                        console.error("Collision worker error:", event.data.error);
+                        this.isReady = false;
+                        this.worker?.terminate();
+                        break;
+                }
+            };
+
+            // The path to the wasm module must be relative to the final worker script's location.
+            // When built, `CollisionWorker.ts` will be in `dist/workers/`, and `collision_logic.js` in `dist/pkg/`.
+            this.worker.postMessage({
+                type: 'init',
+                wasmPath: '../pkg/collision_logic.js'
+            });
+
         } catch (error) {
-            console.error("Failed to load WebAssembly module:", error);
+            console.error("Failed to initialize the collision worker:", error);
+            this.isReady = false;
         }
     }
 
     public update(): void {
-        if (!this.isReady || !this.wasm) {
-            return; // WASM module not ready yet
+        if (!this.isReady || this.updatePending) {
+            return;
         }
 
-        // 1. Prepare the game state object for Rust
-        const gameState: GameState = {
+        this.updatePending = true;
+
+        const gameState = {
             player: { id: 0, position: { x: this.player.x, y: this.player.y }, radius: this.player.width / 2 },
             enemies: this.enemyManager.getEnemies().map(e => ({ id: e.id, position: { x: e.x, y: e.y }, radius: e.width / 2 })),
             projectiles: this.weaponManager.getProjectiles().map(p => ({ id: p.id, position: { x: p.x, y: p.y }, radius: p.width / 2 })),
@@ -92,42 +103,39 @@ export class CollisionManager {
             chests: this.treasureManager.getChests().map(c => ({ id: c.id, position: { x: c.x, y: c.y }, radius: c.width / 2 })),
         };
 
-        // 2. Call the WASM function
-        try {
-            const results: CollisionEvent[] = this.wasm.detect_collisions(gameState);
+        this.worker!.postMessage({
+            type: 'detect',
+            gameState: gameState
+        });
+    }
 
-            // 3. Process the results
-            for (const event of results) {
-                this.handleCollision(event);
-            }
-        } catch (error) {
-            console.error("Error in WASM collision detection:", error);
-            this.isReady = false; // Disable further updates to prevent spamming errors
+    private processCollisions(collisions: CollisionEvent[]): void {
+        for (const event of collisions) {
+            this.handleCollision(event);
         }
     }
 
     private handleCollision(event: CollisionEvent): void {
-        // Sort types to handle (A, B) and (B, A) collisions the same way
         const typeA = Math.min(event.type_a, event.type_b);
         const typeB = Math.max(event.type_a, event.type_b);
         const idA = typeA === event.type_a ? event.id_a : event.id_b;
         const idB = typeA === event.type_a ? event.id_b : event.id_a;
 
         if (typeA === CollidableType.Projectile && typeB === CollidableType.Enemy) {
-            this.weaponManager.registerHit(idA, idB); // projectileId, enemyId
+            this.weaponManager.registerHit(idA, idB);
         } else if (typeA === CollidableType.Player && typeB === CollidableType.Enemy) {
-            // Player taking damage could be handled here
-            // console.log(`Player collided with enemy ${idB}`);
+            // Future implementation: player taking damage
         } else if (typeA === CollidableType.Player && typeB === CollidableType.ExperienceOrb) {
-            this.experienceManager.collectOrb(idB); // orbId
+            this.experienceManager.collectOrb(idB);
         } else if (typeA === CollidableType.Player && typeB === CollidableType.TreasureChest) {
-            this.treasureManager.collectChest(idB); // chestId
+            this.treasureManager.collectChest(idB);
         }
     }
 
     public destroy(): void {
-        // No special cleanup needed for WASM
+        if (this.worker) {
+            this.worker.terminate();
+        }
         this.isReady = false;
-        this.wasm = null;
     }
 }

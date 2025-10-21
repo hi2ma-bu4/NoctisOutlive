@@ -7,13 +7,13 @@ import { ItemData } from './data/ItemData';
 
 export class Backpack extends PIXI.Container {
     private slots: BackpackSlot[][] = [];
-    private items: Item[] = [];
+    public items: Item[] = [];
     private grid: (Item | null)[][] = []; // Logical grid representing occupied slots
     private rows: number;
     private cols: number;
 
     private background: PIXI.Graphics;
-    private itemContainer: PIXI.Container;
+    public itemContainer: PIXI.Container;
 
     constructor(rows: number, cols: number) {
         super();
@@ -30,7 +30,6 @@ export class Backpack extends PIXI.Container {
     }
 
     private createGrid(): void {
-        // Clear existing slots and logical grid
         this.slots.forEach(row => row.forEach(slot => slot.destroy()));
         this.slots = [];
         this.grid = [];
@@ -41,7 +40,7 @@ export class Backpack extends PIXI.Container {
             for (let x = 0; x < this.cols; x++) {
                 const slot = new BackpackSlot(x, y);
                 this.slots[y][x] = slot;
-                this.addChildAt(slot, 1); // Add behind items
+                this.addChildAt(slot, 1);
                 this.grid[y][x] = null;
             }
         }
@@ -51,7 +50,7 @@ export class Backpack extends PIXI.Container {
     private redrawBackground(): void {
         this.background.clear();
         this.background.rect(0, 0, this.cols * SLOT_SIZE, this.rows * SLOT_SIZE);
-        this.background.fill(0x333333, 0.8);
+        this.background.fill({ color: 0x333333, alpha: 0.8 });
     }
 
     public expandGrid(addRows: number, addCols: number): void {
@@ -59,13 +58,12 @@ export class Backpack extends PIXI.Container {
         this.cols += addCols;
         this.createGrid();
 
-        // Re-place existing items into the new grid
         const oldItems = [...this.items];
         this.items = [];
         this.itemContainer.removeChildren();
 
         oldItems.forEach(item => {
-            this.addItem(item.data); // This will find a new spot
+            this.addItem(item.data);
         });
     }
 
@@ -77,12 +75,11 @@ export class Backpack extends PIXI.Container {
             this.placeItem(newItem, position.x, position.y);
             return true;
         }
-
         console.warn("Backpack is full. Cannot add item:", itemData.name);
         return false;
     }
 
-    private findEmptySpace(width: number, height: number): { x: number, y: number } | null {
+    public findEmptySpace(width: number, height: number): { x: number, y: number } | null {
         for (let y = 0; y <= this.rows - height; y++) {
             for (let x = 0; x <= this.cols - width; x++) {
                 if (this.isSpaceAvailable(x, y, width, height)) {
@@ -93,7 +90,10 @@ export class Backpack extends PIXI.Container {
         return null;
     }
 
-    private isSpaceAvailable(startX: number, startY: number, width: number, height: number): boolean {
+    public isSpaceAvailable(startX: number, startY: number, width: number, height: number): boolean {
+        if (startX < 0 || startY < 0 || startX + width > this.cols || startY + height > this.rows) {
+            return false;
+        }
         for (let y = startY; y < startY + height; y++) {
             for (let x = startX; x < startX + width; x++) {
                 if (this.grid[y][x] !== null) {
@@ -104,25 +104,76 @@ export class Backpack extends PIXI.Container {
         return true;
     }
 
-    private placeItem(item: Item, gridX: number, gridY: number): void {
+    public placeItem(item: Item, gridX: number, gridY: number): void {
         item.gridX = gridX;
         item.gridY = gridY;
 
-        // Mark grid cells as occupied
         for (let y = gridY; y < gridY + item.data.height; y++) {
             for (let x = gridX; x < gridX + item.data.width; x++) {
                 this.grid[y][x] = item;
             }
         }
 
-        // Position the item visually
         item.position.set(
             gridX * SLOT_SIZE + (item.width / 2),
             gridY * SLOT_SIZE + (item.height / 2)
         );
 
-        this.items.push(item);
-        this.itemContainer.addChild(item);
+        const index = this.items.indexOf(item);
+        if (index === -1) {
+            this.items.push(item);
+        }
+
+        if (!item.parent) {
+            this.itemContainer.addChild(item);
+        }
+    }
+
+    public unplaceItem(itemToUnplace: Item): void {
+        if (!itemToUnplace || itemToUnplace.gridX === -1) return;
+
+        for (let y = itemToUnplace.gridY; y < itemToUnplace.gridY + itemToUnplace.data.height; y++) {
+            for (let x = itemToUnplace.gridX; x < itemToUnplace.gridX + itemToUnplace.data.width; x++) {
+                if (y < this.rows && x < this.cols && this.grid[y][x] === itemToUnplace) {
+                    this.grid[y][x] = null;
+                }
+            }
+        }
+
+        const index = this.items.indexOf(itemToUnplace);
+        if (index > -1) {
+            this.items.splice(index, 1);
+        }
+
+        itemToUnplace.gridX = -1;
+        itemToUnplace.gridY = -1;
+    }
+
+    public removeItem(itemToRemove: Item): void {
+        this.unplaceItem(itemToRemove);
+        this.itemContainer.removeChild(itemToRemove);
+        if (!itemToRemove.destroyed) {
+            itemToRemove.destroy();
+        }
+    }
+
+    public tryToRotateItem(item: Item): boolean {
+        const originalGridX = item.gridX;
+        const originalGridY = item.gridY;
+
+        if (originalGridX === -1 || originalGridY === -1) return false;
+
+        this.unplaceItem(item);
+        item.rotate();
+
+        if (this.isSpaceAvailable(originalGridX, originalGridY, item.data.width, item.data.height)) {
+            this.placeItem(item, originalGridX, originalGridY);
+            return true;
+        } else {
+            item.rotate();
+            this.placeItem(item, originalGridX, originalGridY);
+            return false;
+        }
     }
 
     public getItems(): Item[] {

@@ -5,6 +5,7 @@ export enum StageType {
     HIGH_DIFFICULTY = 'high_difficulty',
     SHOP = 'shop',
     EVENT = 'event',
+    SYSTEM_SCENE = 'system_scene', // For internal scenes like StageSelect, not for gameplay
 }
 
 export interface EnemySpawn {

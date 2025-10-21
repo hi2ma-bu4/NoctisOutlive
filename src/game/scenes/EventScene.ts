@@ -83,40 +83,66 @@ export class EventScene implements IScene {
     }
 
     private handleChoice(choice: EventChoice): void {
-        console.log(`Player chose: "${choice.text}"`);
+        // Clear the choice buttons
+        this.container.children.filter(child => child.interactive).forEach(child => child.destroy());
 
-        // Apply effects
+        let resultText = "Outcome:\n";
         choice.effects.forEach(effect => {
-            this.applyEffect(effect);
+            resultText += this.applyEffect(effect) + "\n";
         });
 
-        // After making a choice, return to the stage select screen
-        SceneManager.changeScene(new StageSelectScene());
+        if (choice.effects.length === 0) {
+            resultText += "Nothing happened.";
+        }
+
+        this.showResult(resultText);
     }
 
-    private applyEffect(effect: ItemEffect): void {
-        // This effect handler needs to be more robust
+    private applyEffect(effect: ItemEffect): string {
         switch(effect.type) {
-            case 'health_increase':
-                // This would be better applied to the player object itself in GameScene,
-                // but for now we can't do that. This highlights the need for persistent player stats
-                // beyond just backpack and money. For now, this effect does nothing outside of combat.
-                console.log(`Health increase effect of ${effect.value} cannot be applied here.`);
-                break;
             case 'add_item':
                 const itemData = itemDatabase.find(i => i.id === effect.value);
                 if (itemData) {
-                    this.playerData.backpack.addItem(itemData);
-                    console.log(`Added ${itemData.name} to backpack.`);
+                    const success = this.playerData.backpack.addItem(itemData);
+                    return success ? `Added ${itemData.name} to backpack.` : `Backpack is full, lost ${itemData.name}.`;
                 }
-                break;
+                return `Could not find item with id: ${effect.value}`;
             case 'lose_money':
-                this.playerData.money = Math.max(0, this.playerData.money - effect.value);
-                console.log(`Lost ${effect.value} money.`);
-                break;
+                const amount = effect.value as number;
+                this.playerData.money = Math.max(0, this.playerData.money - amount);
+                return `Lost ${amount} money.`;
+            // Note: 'health_increase' and other combat stats are not applied here as they are not persistent.
+            // A more complex system would be needed for permanent stat boosts.
             default:
                 console.warn(`Unhandled event effect type: ${effect.type}`);
+                return `An unknown effect occurred.`;
         }
+    }
+
+    private showResult(resultText: string): void {
+        const screen = { width: 1280, height: 720 };
+
+        const resultLabel = new PIXI.Text(resultText, { fontSize: 28, fill: 0xCCCCCC, wordWrap: true, wordWrapWidth: 700, align: 'center' });
+        resultLabel.anchor.set(0.5);
+        resultLabel.x = screen.width / 2;
+        resultLabel.y = screen.height / 2 + 50;
+        this.container.addChild(resultLabel);
+
+        const continueButton = new PIXI.Graphics()
+            .rect(0, 0, 200, 80)
+            .fill(0x00AA00);
+        const continueText = new PIXI.Text('Continue', { fontSize: 24, fill: 0xFFFFFF });
+        continueText.anchor.set(0.5);
+        continueText.position.set(100, 40);
+        continueButton.addChild(continueText);
+
+        continueButton.x = screen.width / 2 - 100;
+        continueButton.y = screen.height - 150;
+        continueButton.interactive = true;
+        continueButton.cursor = 'pointer';
+        continueButton.on('pointertap', () => SceneManager.changeScene('stage_select'));
+
+        this.container.addChild(continueButton);
     }
 
     public update(delta: PIXI.Ticker): void {}

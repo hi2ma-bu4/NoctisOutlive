@@ -6,12 +6,20 @@ import * as PIXI from 'pixi.js';
 
 export abstract class BaseBoss extends BaseEnemy {
     protected bossData: BossSpawn;
+    protected spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void;
     private abilityCooldowns: Map<string, number> = new Map();
     private phase: number = 1;
 
-    constructor(enemyType: string, id: number, bossData: BossSpawn) {
+    constructor(
+        enemyType: string,
+        id: number,
+        bossData: BossSpawn,
+        // Optional callback to allow bosses to spawn minions
+        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void = () => {}
+    ) {
         super(enemyType, id);
         this.bossData = bossData;
+        this.spawnEnemyCallback = spawnEnemyCallback;
 
         // Apply health multiplier
         this.stats.health *= this.bossData.healthMultiplier;

@@ -50,9 +50,7 @@ export class Game {
 
     private async loadAssetsAndStart() {
         await AssetManager.loadBundle('game-assets');
-
-        const stageSelectScene = new StageSelectScene();
-        SceneManager.changeScene(stageSelectScene);
+        SceneManager.changeScene('stage_select');
     }
 
     private update(delta: PIXI.Ticker) {

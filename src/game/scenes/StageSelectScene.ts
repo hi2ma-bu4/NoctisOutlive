@@ -28,8 +28,7 @@ export class StageSelectScene implements IScene {
         title.y = 100;
         this.container.addChild(title);
 
-        StageManager.init(); // Initialize the stages
-        const allStages = StageManager.getAllStages();
+        const allStages = StageManager.getAllStages().filter(stage => stage.type !== StageType.SYSTEM_SCENE);
         const buttonWidth = 400;
         const buttonHeight = 120;
         const padding = 20;
@@ -66,19 +65,8 @@ export class StageSelectScene implements IScene {
             button.addChild(buttonTextDesc);
 
             button.on('pointertap', () => {
-                StageManager.setCurrentStage(stage.id);
-                switch (stage.type) {
-                    case StageType.STANDARD:
-                    case StageType.HIGH_DIFFICULTY:
-                        SceneManager.changeScene(new GameScene());
-                        break;
-                    case StageType.SHOP:
-                        SceneManager.changeScene(new ShopScene());
-                        break;
-                    case StageType.EVENT:
-                        SceneManager.changeScene(new EventScene());
-                        break;
-                }
+                // The new SceneManager handles scene creation based on stage type
+                SceneManager.changeScene(stage.id);
             });
 
             this.container.addChild(button);
