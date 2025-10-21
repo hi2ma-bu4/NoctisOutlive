@@ -26,10 +26,29 @@ export class PlayerData {
 
     /**
      * Replaces the current backpack with a new one.
-     * Useful when loading data or syncing with the in-game player object.
+     * Useful when loading data or syncing with the in--game player object.
      * @param newBackpack The new backpack instance.
      */
     public setBackpack(newBackpack: Backpack): void {
         this.backpack = newBackpack;
+    }
+
+    /**
+     * Applies the effects of an item to the player's persistent data.
+     * @param itemData The item whose effects should be applied.
+     */
+    public applyItemEffect(itemData: import('../game/data/ItemData').ItemData): void {
+        itemData.effects.forEach(effect => {
+            switch (effect.type) {
+                case 'backpack_expand':
+                    if (effect.value && typeof effect.value.width === 'number' && typeof effect.value.height === 'number') {
+                        console.log(`Expanding backpack by ${effect.value.width}x${effect.value.height}`);
+                        this.backpack.expandGrid(effect.value.height, effect.value.width);
+                    }
+                    break;
+                // Other persistent effects can be handled here
+                // For example, a permanent stat boost could be applied to a `this.permanentStats` object.
+            }
+        });
     }
 }

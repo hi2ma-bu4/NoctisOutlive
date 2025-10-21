@@ -3,7 +3,8 @@
 import * as PIXI from 'pixi.js';
 import { BaseEnemy } from './BaseEnemy';
 import { BaseBoss } from './BaseBoss';
-import { SampleBoss } from './SampleBoss';
+import { GoblinLeader } from './bosses/GoblinLeader';
+import { OrcChieftain } from './bosses/OrcChieftain';
 import { ExperienceManager } from './ExperienceManager';
 import { TreasureManager } from './TreasureManager';
 import { EffectManager } from '../core/EffectManager';
@@ -99,10 +100,14 @@ export class EnemyManager {
         }
     }
 
-    private spawnEnemy(enemyType: string) {
+    public spawnEnemy(enemyType: string, position?: PIXI.Point) {
         try {
             const enemy = new BaseEnemy(enemyType, this.enemyIdCounter++);
-            this.setupEnemyPosition(enemy);
+            if (position) {
+                enemy.position.copyFrom(position);
+            } else {
+                this.setupEnemyPosition(enemy);
+            }
             this.enemies.push(enemy);
             this.container.addChild(enemy);
         } catch (error) {
@@ -138,19 +143,21 @@ export class EnemyManager {
 
     private spawnBoss(bossInfo: BossSpawn) {
         let boss: BaseBoss;
+        const spawnCallback = this.spawnEnemy.bind(this);
 
-        // This can be expanded with a factory or a switch for different boss types
         switch (bossInfo.bossType) {
-            case 'sample_boss': // This key should be defined in EnemyData.ts
-                boss = new SampleBoss(bossInfo.bossType, this.enemyIdCounter++, bossInfo);
+            case 'goblin_leader':
+                boss = new GoblinLeader(bossInfo.bossType, this.enemyIdCounter++, bossInfo, spawnCallback);
+                break;
+            case 'orc_chieftain':
+                boss = new OrcChieftain(bossInfo.bossType, this.enemyIdCounter++, bossInfo, spawnCallback);
                 break;
             default:
-                console.error(`Unknown boss type: ${bossInfo.bossType}. Spawning SampleBoss as fallback.`);
-                boss = new SampleBoss('sample_boss', this.enemyIdCounter++, bossInfo);
-                break;
+                console.error(`Unknown boss type: ${bossInfo.bossType}. No fallback implemented.`);
+                return;
         }
 
-        this.setupEnemyPosition(boss); // Use the same off-screen positioning logic
+        this.setupEnemyPosition(boss);
         this.enemies.push(boss);
         this.container.addChild(boss);
 

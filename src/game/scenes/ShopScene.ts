@@ -55,6 +55,7 @@ export class ShopScene implements IScene {
 
         // Display shop items
         this.renderShopItems(screen);
+        this.renderSellItems(screen);
 
         const backButton = new PIXI.Text('Back to Stage Select', { fontSize: 24, fill: 0xFFFFFF });
         backButton.anchor.set(0.5);
@@ -62,47 +63,126 @@ export class ShopScene implements IScene {
         backButton.y = screen.height - 60;
         backButton.interactive = true;
         backButton.cursor = 'pointer';
-        backButton.on('pointertap', () => SceneManager.changeScene(new StageSelectScene()));
+        backButton.on('pointertap', () => SceneManager.changeScene('stage_select'));
         this.container.addChild(backButton);
     }
 
     private renderShopItems(screen: { width: number, height: number }): void {
-        const itemWidth = 200; // From ItemChoice
-        const spacing = 40;
-        const totalWidth = (itemWidth * this.shopInventory.length) + (spacing * (this.shopInventory.length - 1));
-        const startX = (screen.width - totalWidth) / 2;
+        const shopTitle = new PIXI.Text('For Sale', { fontSize: 32, fill: 0xFFFFFF });
+        shopTitle.anchor.set(0.5);
+        shopTitle.x = screen.width / 4;
+        shopTitle.y = 150;
+        this.container.addChild(shopTitle);
 
-        this.shopInventory.forEach((shopItem, index) => {
+        const shopPanel = new PIXI.Graphics().rect(50, 180, screen.width / 2 - 100, screen.height - 300).fill({color: 0x000000, alpha: 0.5});
+        this.container.addChild(shopPanel);
+
+        let shopX = 100;
+        let shopY = 200;
+
+        this.shopInventory.forEach((shopItem) => {
             const itemCard = new ItemChoice(shopItem.item);
-            itemCard.x = startX + index * (itemWidth + spacing);
-            itemCard.y = (screen.height - itemCard.height) / 2 - 50;
+            itemCard.position.set(shopX, shopY);
 
-            const priceText = new PIXI.Text(`${shopItem.price} G`, { fontSize: 24, fill: 0xFFD700, fontWeight: 'bold' });
+            const priceText = new PIXI.Text(`Buy: ${shopItem.price} G`, { fontSize: 20, fill: 0xFFD700 });
             priceText.anchor.set(0.5);
-            priceText.x = itemCard.x + itemCard.width / 2;
-            priceText.y = itemCard.y + itemCard.height + 30;
+            priceText.position.set(shopX + itemCard.width / 2, shopY + itemCard.height + 20);
 
             itemCard.on('pointertap', () => this.purchaseItem(shopItem));
-
             this.container.addChild(itemCard, priceText);
+
+            shopX += itemCard.width + 40;
+            if (shopX > screen.width / 2 - 150) {
+                shopX = 100;
+                shopY += itemCard.height + 60;
+            }
         });
+    }
+
+    private renderSellItems(screen: { width: number, height: number }): void {
+        const sellTitle = new PIXI.Text('Your Items', { fontSize: 32, fill: 0xFFFFFF });
+        sellTitle.anchor.set(0.5);
+        sellTitle.x = screen.width * 3 / 4;
+        sellTitle.y = 150;
+        this.container.addChild(sellTitle);
+
+        const sellPanel = new PIXI.Graphics().rect(screen.width / 2 + 50, 180, screen.width / 2 - 100, screen.height - 300).fill({color: 0x000000, alpha: 0.5});
+        this.container.addChild(sellPanel);
+
+        let sellX = screen.width / 2 + 100;
+        let sellY = 200;
+
+        this.playerData.backpack.getItems().forEach(item => {
+            const itemCard = new ItemChoice(item.data);
+            itemCard.position.set(sellX, sellY);
+
+            const sellPrice = this.getSellPrice(item.data);
+            const priceText = new PIXI.Text(`Sell: ${sellPrice} G`, { fontSize: 20, fill: 0x00FF00 });
+            priceText.anchor.set(0.5);
+            priceText.position.set(sellX + itemCard.width / 2, sellY + itemCard.height + 20);
+
+            itemCard.on('pointertap', () => this.sellItem(item, sellPrice));
+            this.container.addChild(itemCard, priceText);
+
+            sellX += itemCard.width + 40;
+            if (sellX > screen.width - 150) {
+                sellX = screen.width / 2 + 100;
+                sellY += itemCard.height + 60;
+            }
+        });
+    }
+
+    private getSellPrice(item: ItemData): number {
+        const shopItem = this.shopInventory.find(si => si.item.id === item.id);
+        return Math.floor((shopItem ? shopItem.price : 10) / 2);
     }
 
     private purchaseItem(shopItem: { item: ItemData, price: number }): void {
         if (this.playerData.money >= shopItem.price) {
             if (this.playerData.backpack.addItem(shopItem.item)) {
                 this.playerData.money -= shopItem.price;
-                this.updateMoneyDisplay();
-                console.log(`Purchased ${shopItem.item.name}`);
-                // Optional: add a success visual/sound effect
+                this.showFeedback(`Purchased ${shopItem.item.name}!`, 0x00FF00);
+                this.refreshUI();
             } else {
-                console.log("Backpack is full!");
-                // Optional: add a "backpack full" visual/sound effect
+                this.showFeedback("Backpack is full!", 0xFF0000);
             }
         } else {
-            console.log("Not enough money!");
-            // Optional: add a "not enough money" visual/sound effect
+            this.showFeedback("Not enough money!", 0xFF0000);
         }
+    }
+
+    private sellItem(item: import('../Item').Item, sellPrice: number): void {
+        this.playerData.backpack.removeItem(item);
+        this.playerData.money += sellPrice;
+        this.showFeedback(`Sold ${item.data.name}!`, 0x00FF00);
+        this.refreshUI();
+    }
+
+    private refreshUI(): void {
+        // Simple refresh: clear and re-render everything
+        this.container.removeChildren();
+        this.setupUI();
+    }
+
+    private showFeedback(message: string, color: number): void {
+        const feedbackText = new PIXI.Text(message, { fontSize: 28, fill: color, stroke: 0x000000, strokeThickness: 4 });
+        feedbackText.anchor.set(0.5);
+        feedbackText.x = this.container.width / 2;
+        feedbackText.y = this.container.height / 2;
+        this.container.addChild(feedbackText);
+
+        // Fade out and remove
+        let elapsed = 0;
+        const duration = 1500; // 1.5 seconds
+        const ticker = (delta: any) => {
+            elapsed += delta.deltaTime * 16.67;
+            feedbackText.alpha = 1 - (elapsed / duration);
+            if (elapsed >= duration) {
+                PIXI.Ticker.shared.remove(ticker);
+                feedbackText.destroy();
+            }
+        };
+        PIXI.Ticker.shared.add(ticker);
     }
 
     private updateMoneyDisplay(): void {

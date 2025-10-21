@@ -1,81 +1,75 @@
 // src/game/data/Stages.ts
-
 import { StageData, StageType } from './StageData';
 
 export const Stages: StageData[] = [
+    // System Scene for Stage Selection
     {
-        id: 'stage-1',
-        name: 'Whispering Woods',
-        type: StageType.STANDARD,
-        description: 'A haunted forest teeming with slimes and bats.',
-        background: 'background-forest',
-        music: 'music-forest',
-        enemies: [
-            { enemyType: 'slime', spawnTime: 0, spawnCount: 10 },
-            { enemyType: 'bat', spawnTime: 30, spawnCount: 15 },
-            { enemyType: 'slime', spawnTime: 60, spawnCount: 20 },
-            { enemyType: 'bat', spawnTime: 90, spawnCount: 25 },
-        ],
-        bosses: [
-            {
-                bossType: 'sample_boss', // Using SampleBoss for now
-                spawnTime: 180,
-                isMidBoss: true,
-                aiType: 'caster',
-                healthMultiplier: 1.5,
-                abilities: ['aoe_slam']
-            }
-        ],
-    },
-    {
-        id: 'stage-2',
-        name: 'Sunken Crypt',
-        type: StageType.HIGH_DIFFICULTY,
-        description: 'Vicious undead guard this cursed tomb.',
-        background: 'background-graveyard',
-        music: 'music-graveyard',
-        enemies: [
-            { enemyType: 'zombie', spawnTime: 0, spawnCount: 20 },
-            { enemyType: 'ghost', spawnTime: 45, spawnCount: 10 },
-            { enemyType: 'zombie', spawnTime: 90, spawnCount: 30 },
-            { enemyType: 'ghost', spawnTime: 120, spawnCount: 20 },
-        ],
-        bosses: [
-            {
-                bossType: 'sample_boss',
-                spawnTime: 240,
-                isMidBoss: true,
-                aiType: 'charger',
-                healthMultiplier: 2.0,
-                abilities: ['summon_minions', 'aoe_slam']
-            },
-            {
-                bossType: 'sample_boss', // Final Boss
-                spawnTime: 600,
-                isMidBoss: false,
-                aiType: 'caster',
-                healthMultiplier: 3.0,
-                abilities: ['summon_minions', 'aoe_slam']
-            }
-        ]
-    },
-    {
-        id: 'shop-1',
-        name: 'Goblin Market',
-        type: StageType.SHOP,
-        description: 'Spend your hard-earned gold.',
-        background: 'background-shop',
-        music: 'music-shop',
+        id: 'stage_select',
+        name: 'Stage Select',
+        type: StageType.SYSTEM_SCENE,
+        description: 'Choose your next destination.',
+        background: 'background_menu',
+        music: 'music_menu',
         enemies: [],
         bosses: [],
     },
+
+    // Standard Stage
     {
-        id: 'event-1',
-        name: 'Ancient Shrine',
+        id: 'stage_1',
+        name: 'Forgotten Plains',
+        type: StageType.STANDARD,
+        description: 'A standard stage with a variety of enemies.',
+        background: 'background_plains',
+        music: 'music_stage_1',
+        enemies: [
+            { enemyType: 'bat', spawnTime: 0, spawnCount: 10 },
+            { enemyType: 'slime', spawnTime: 30, spawnCount: 15 },
+            { enemyType: 'goblin', spawnTime: 60, spawnCount: 5 },
+        ],
+        bosses: [
+            { bossType: 'goblin_leader', spawnTime: 300, isMidBoss: true, aiType: 'default', healthMultiplier: 1.5, abilities: ['summon_goblin'] },
+            { bossType: 'orc_chieftain', spawnTime: 600, isMidBoss: false, aiType: 'charger', healthMultiplier: 2.0, abilities: ['charge', 'stomp'] },
+        ],
+    },
+
+    // High-Difficulty Stage
+    {
+        id: 'stage_hard_1',
+        name: 'Cursed Wastes',
+        type: StageType.HIGH_DIFFICULTY,
+        description: 'A high-difficulty stage with relentless foes.',
+        background: 'background_wastes',
+        music: 'music_stage_hard',
+        enemies: [
+            { enemyType: 'armored_goblin', spawnTime: 0, spawnCount: 20 },
+            { enemyType: 'shadow_bat', spawnTime: 30, spawnCount: 25 },
+        ],
+        bosses: [
+            { bossType: 'lich', spawnTime: 600, isMidBoss: false, aiType: 'caster', healthMultiplier: 3.0, abilities: ['fireball', 'summon_undead'] },
+        ],
+    },
+
+    // Shop Stage
+    {
+        id: 'shop_1',
+        name: 'Mysterious Trader',
+        type: StageType.SHOP,
+        description: 'A place to buy and sell rare goods.',
+        background: 'background_shop',
+        music: 'music_shop',
+        enemies: [],
+        bosses: [],
+    },
+
+    // Event Stage
+    {
+        id: 'event_1',
+        name: 'Whispering Fountain',
         type: StageType.EVENT,
-        description: 'Make a choice, face the consequences.',
-        background: 'background-fountain',
-        music: 'music-fountain',
+        description: 'A mysterious fountain offers you a choice.',
+        background: 'background_event',
+        music: 'music_event',
         enemies: [],
         bosses: [],
     },

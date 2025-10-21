@@ -29,4 +29,15 @@ export class Item extends PIXI.Sprite {
         this.width = this.data.width * SLOT_SIZE;
         this.height = this.data.height * SLOT_SIZE;
     }
+
+    public rotate(): void {
+        // Swap dimensions
+        [this.data.width, this.data.height] = [this.data.height, this.data.width];
+
+        // Swap visual size
+        [this.width, this.height] = [this.height, this.width];
+
+        // Rotate sprite
+        this.rotation += Math.PI / 2;
+    }
 }
