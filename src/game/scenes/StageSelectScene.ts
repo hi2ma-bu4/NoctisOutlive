@@ -5,8 +5,8 @@ import { IScene } from '../../core/IScene';
 import { SceneManager } from '../../core/SceneManager';
 import { StageManager } from '../../core/StageManager';
 import { GameScene } from './GameScene';
-import { ShopScene } from './ShopScene'; // To be created
-import { EventScene } from './EventScene'; // To be created
+import { ShopScene } from './ShopScene';
+import { EventScene } from './EventScene';
 import { StageType } from '../data/StageData';
 
 export class StageSelectScene implements IScene {

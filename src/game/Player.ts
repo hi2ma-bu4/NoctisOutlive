@@ -11,6 +11,11 @@ export class Player extends PIXI.Sprite {
     public damageMultiplier: number = 1.0;
     public pickupRadius: number = 100;
 
+    // Experience and Leveling
+    public level: number = 1;
+    public experience: number = 0;
+    public experienceToNextLevel: number = 100;
+
     public backpack: Backpack;
 
     constructor(texture: PIXI.Texture) {
@@ -47,6 +52,24 @@ export class Player extends PIXI.Sprite {
             }
         });
     }
+
+    public addExperience(amount: number): boolean {
+        this.experience += amount;
+        if (this.experience >= this.experienceToNextLevel) {
+            this.levelUp();
+            return true; // Leveled up
+        }
+        return false; // Did not level up
+    }
+
+    private levelUp(): void {
+        this.level++;
+        this.experience -= this.experienceToNextLevel;
+        // Increase exp requirement for next level, e.g., by 20%
+        this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.2);
+        console.log(`Player leveled up to level ${this.level}! Next level at ${this.experienceToNextLevel} exp.`);
+    }
+
 
     public update(delta: number) {
         let dx = 0;

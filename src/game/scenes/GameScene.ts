@@ -7,15 +7,26 @@ import { EnemyManager } from '../EnemyManager';
 import { ExperienceManager } from '../ExperienceManager';
 import { WeaponManager } from '../WeaponManager';
 import { TreasureManager } from '../TreasureManager';
-
-import { LootBoxUI } from '../ui/LootBoxUI';
 import { CollisionManager } from '../../core/CollisionManager';
+import { RewardScreen } from '../ui/RewardScreen';
+import { BackpackScreen } from '../ui/BackpackScreen';
+import { IReward, RewardManager } from '../../core/RewardManager';
+import { InputManager } from '../../core/InputManager';
+import { PlayerData } from '../../core/PlayerData';
+
+enum GameState {
+    PLAYING,
+    PAUSED,
+    REWARD,
+}
 
 export class GameScene implements IScene {
     public container: PIXI.Container;
     private player: Player;
-    private isPaused: boolean = false;
+    private state: GameState = GameState.PLAYING;
     private stageTimer: number = 0;
+
+    // Managers
     private enemyManager: EnemyManager;
     private experienceManager: ExperienceManager;
     private weaponManager: WeaponManager;
@@ -24,9 +35,6 @@ export class GameScene implements IScene {
 
     constructor() {
         this.container = new PIXI.Container();
-        this.experienceManager = new ExperienceManager(this.container);
-        this.treasureManager = new TreasureManager(this.container, () => this.showLootBoxUI());
-        this.enemyManager = new EnemyManager(this.container, this.experienceManager, this.treasureManager);
     }
 
     public init(): void {
@@ -38,6 +46,11 @@ export class GameScene implements IScene {
         }
 
         this.player = new Player(playerTexture);
+
+        // Load persistent data BEFORE adding backpack to UI
+        const playerData = PlayerData.getInstance();
+        this.player.backpack = playerData.backpack;
+
         const screen = (this.container.parent as any)?.renderer.screen;
         if (screen) {
             this.player.x = screen.width / 2;
@@ -45,10 +58,11 @@ export class GameScene implements IScene {
         }
         this.container.addChild(this.player);
 
-        // WeaponManager must be created after Player
+        // Initialize Managers
+        this.experienceManager = new ExperienceManager(this.container, this.player, () => this.handleLevelUp());
+        this.treasureManager = new TreasureManager(this.container, (rewards) => this.showRewardScreen(rewards));
+        this.enemyManager = new EnemyManager(this.container, this.experienceManager, this.treasureManager);
         this.weaponManager = new WeaponManager(this.container, this.enemyManager);
-
-        // CollisionManager must be created after all other managers
         this.collisionManager = new CollisionManager(this.player, this.enemyManager, this.weaponManager, this.experienceManager, this.treasureManager);
 
         // Add backpack to UI
@@ -57,10 +71,48 @@ export class GameScene implements IScene {
         UIManager.container.addChild(this.player.backpack);
     }
 
-    public update(delta: PIXI.Ticker): void {
-        if (this.isPaused || !this.player) return;
+    private handleLevelUp(): void {
+        console.log("Level up detected! Generating rewards...");
+        const rewards = RewardManager.generateRewards(3);
+        this.showRewardScreen(rewards);
+    }
 
-        this.stageTimer += delta.deltaTime / 60; // Update timer in seconds
+    private showRewardScreen(rewards: IReward[]): void {
+        this.state = GameState.REWARD;
+        const rewardScreen = new RewardScreen(this.player, rewards, () => {
+            this.state = GameState.PLAYING;
+        });
+        UIManager.container.addChild(rewardScreen);
+    }
+
+    private toggleBackpackScreen(): void {
+        if (this.state === GameState.PLAYING) {
+            this.state = GameState.PAUSED;
+            const backpackScreen = new BackpackScreen(this.player.backpack, () => {
+                this.state = GameState.PLAYING;
+            });
+            UIManager.container.addChild(backpackScreen);
+        } else if (this.state === GameState.PAUSED) {
+            // This assumes the only reason for PAUSED is the backpack screen.
+            // A more robust state machine would be needed if there were other pauses (like a pause menu).
+            const backpackScreen = UIManager.container.getChildByName('BackpackScreen');
+            if (backpackScreen instanceof BackpackScreen) {
+                backpackScreen.close();
+            } else {
+                // Fallback if the screen wasn't found - just unpause.
+                this.state = GameState.PLAYING;
+            }
+        }
+    }
+
+    public update(delta: PIXI.Ticker): void {
+        if (InputManager.isKeyJustPressed('KeyB')) {
+            this.toggleBackpackScreen();
+        }
+
+        if (this.state !== GameState.PLAYING || !this.player) return;
+
+        this.stageTimer += delta.deltaTime / 60;
 
         this.player.update(delta.deltaTime);
         this.enemyManager.update(delta.deltaTime, this.player.position);
@@ -71,17 +123,15 @@ export class GameScene implements IScene {
         UIManager.updateGameHUD(this.player, this.stageTimer);
     }
 
-    public showLootBoxUI() {
-        this.isPaused = true;
-        const lootBoxUI = new LootBoxUI(this.player, () => {
-            this.isPaused = false;
-        });
-        UIManager.container.addChild(lootBoxUI);
-    }
-
     public destroy(): void {
+        // Save persistent data before destroying
+        const playerData = PlayerData.getInstance();
+        playerData.setBackpack(this.player.backpack);
+
         UIManager.hideGameHUD();
-        this.collisionManager.destroy();
+        if (this.collisionManager) {
+            this.collisionManager.destroy();
+        }
         this.container.destroy({ children: true, texture: true, baseTexture: true });
     }
 }

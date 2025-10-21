@@ -1,58 +1,63 @@
-// src/game/ui/LootBoxUI.ts
+// src/game/ui/RewardScreen.ts
 
 import * as PIXI from 'pixi.js';
 import { ItemChoice } from './ItemChoice';
 import { ItemData, ItemType } from '../data/ItemData';
-import { getLootChoices } from '../data/Items';
 import { Player } from '../Player';
+import { IReward } from '../../core/RewardManager';
 
-export class LootBoxUI extends PIXI.Container {
+export class RewardScreen extends PIXI.Container {
     private player: Player;
     private onChoice: () => void; // Callback to resume the game
 
-    constructor(player: Player, onChoice: () => void) {
+    constructor(player: Player, rewards: IReward[], onChoice: () => void) {
         super();
         this.player = player;
         this.onChoice = onChoice;
-        this.interactive = true;
-        this.createUI();
+        this.interactive = true; // Absorb clicks on the overlay
+        this.createUI(rewards);
     }
 
-    private createUI() {
+    private createUI(rewards: IReward[]) {
+        // This logic assumes the screen size is available via the renderer.
+        // It might be better to pass screen dimensions to the constructor.
+        const screen = (this.parent as any)?.renderer.screen || { width: 1280, height: 720 };
+
         // Background overlay
         const overlay = new PIXI.Graphics();
-        const screen = (this.parent as any)?.renderer.screen;
         overlay.rect(0, 0, screen.width, screen.height);
-        overlay.fill(0x000000, 0.8);
+        overlay.fill({ color: 0x000000, alpha: 0.8 });
         this.addChild(overlay);
 
         // Title
-        const title = new PIXI.Text('Choose Your Loot!', { fontSize: 48, fill: 0xFFD700 });
+        const title = new PIXI.Text('Choose a Reward!', { fontSize: 48, fill: 0xFFD700, fontWeight: 'bold' });
         title.anchor.set(0.5);
         title.x = screen.width / 2;
         title.y = 150;
         this.addChild(title);
 
-        // Get 3 random items
-        const choices = getLootChoices(3);
-
         // Display choices
-        const choiceWidth = 250;
+        const choiceWidth = 200; // From ItemChoice
         const spacing = 60;
-        const totalWidth = (choiceWidth * choices.length) + (spacing * (choices.length - 1));
+        const totalWidth = (choiceWidth * rewards.length) + (spacing * (rewards.length - 1));
         const startX = (screen.width - totalWidth) / 2;
 
-        choices.forEach((itemData, index) => {
+        rewards.forEach((reward, index) => {
+            // For now, we assume all rewards are items
+            const itemData = reward.data;
             const itemChoice = new ItemChoice(itemData);
             itemChoice.x = startX + index * (choiceWidth + spacing);
             itemChoice.y = (screen.height - itemChoice.height) / 2;
 
-            itemChoice.on('pointertap', () => this.selectItem(itemData));
+            itemChoice.on('pointertap', () => this.selectReward(reward));
             this.addChild(itemChoice);
         });
     }
 
-    private selectItem(itemData: ItemData) {
+    private selectReward(reward: IReward) {
+        // For now, we only handle item rewards
+        const itemData = reward.data;
+
         // Apply item effects
         this.player.applyItemEffects(itemData);
 

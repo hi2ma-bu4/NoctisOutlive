@@ -2,19 +2,23 @@
 
 import * as PIXI from 'pixi.js';
 import { BaseEnemy } from './BaseEnemy';
+import { BaseBoss } from './BaseBoss';
+import { SampleBoss } from './SampleBoss';
 import { ExperienceManager } from './ExperienceManager';
 import { TreasureManager } from './TreasureManager';
 import { EffectManager } from '../core/EffectManager';
+import { UIManager } from '../core/UIManager';
 import { StageManager } from '../core/StageManager';
 import { EnemySpawn, BossSpawn } from './data/StageData';
 
 export class EnemyManager {
-    private enemies: BaseEnemy[] = [];
+    private enemies: (BaseEnemy | BaseBoss)[] = [];
     private container: PIXI.Container;
     private experienceManager: ExperienceManager;
     private treasureManager: TreasureManager;
     private stageTimer: number = 0;
     private enemyIdCounter: number = 0;
+    private isBossActive: boolean = false;
 
     private enemySpawnQueue: EnemySpawn[];
     private bossSpawnQueue: BossSpawn[];
@@ -39,38 +43,59 @@ export class EnemyManager {
     public update(delta: number, playerPosition: PIXI.Point) {
         this.stageTimer += delta / 60; // Convert delta frames to seconds
 
-        // Check for enemy spawns
-        while (this.enemySpawnQueue.length > 0 && this.stageTimer >= this.enemySpawnQueue[0].spawnTime) {
-            const spawnInfo = this.enemySpawnQueue.shift()!;
-            for (let i = 0; i < spawnInfo.spawnCount; i++) {
-                this.spawnEnemy(spawnInfo.enemyType);
+        // Check for enemy spawns only if a boss is not active
+        if (!this.isBossActive) {
+            while (this.enemySpawnQueue.length > 0 && this.stageTimer >= this.enemySpawnQueue[0].spawnTime) {
+                const spawnInfo = this.enemySpawnQueue.shift()!;
+                for (let i = 0; i < spawnInfo.spawnCount; i++) {
+                    this.spawnEnemy(spawnInfo.enemyType);
+                }
             }
         }
 
         // Check for boss spawns
-        while (this.bossSpawnQueue.length > 0 && this.stageTimer >= this.bossSpawnQueue[0].spawnTime) {
-            const bossInfo = this.bossSpawnQueue.shift()!;
-            this.spawnEnemy(bossInfo.bossType); // Spawning bosses as regular enemies for now
+        if (!this.isBossActive) {
+            while (this.bossSpawnQueue.length > 0 && this.stageTimer >= this.bossSpawnQueue[0].spawnTime) {
+                const bossInfo = this.bossSpawnQueue.shift()!;
+                this.spawnBoss(bossInfo);
+                this.isBossActive = true;
+                break; // Spawn one boss at a time
+            }
         }
 
         // Update all enemies
+        let bossCount = 0;
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             enemy.update(delta, playerPosition);
 
             if (enemy.isDead()) {
-                EffectManager.createExplosion(enemy.position);
-                this.experienceManager.spawnOrb(enemy.position, 1);
+                const wasBoss = enemy instanceof BaseBoss;
+                EffectManager.createExplosion(enemy.position, wasBoss ? 0xFFD700 : 0xFFFFFF, wasBoss ? 2.0 : 1.0); // Bigger, golden explosion for bosses
+                this.experienceManager.spawnOrb(enemy.position, enemy.stats.expValue * (wasBoss ? 5 : 1));
 
-                // Drop treasure chest based on probability (e.g., 20% for normal, 100% for boss)
-                const isBoss = StageManager.getCurrentStage()?.bosses.some(b => b.bossType === enemy.stats.type);
-                if (isBoss || Math.random() < 0.2) {
+                // Drop treasure chest: 100% for boss, 20% for normal
+                if (wasBoss || Math.random() < 0.2) {
                     this.treasureManager.spawnChest(enemy.position);
                 }
 
                 this.container.removeChild(enemy);
                 this.enemies.splice(i, 1);
+
+                if (wasBoss) {
+                    UIManager.hideBossHUD();
+                }
+
+            } else if (enemy instanceof BaseBoss) {
+                bossCount++;
+                UIManager.updateBossHUD(enemy.getCurrentHealth(), enemy.getMaxHealth());
             }
+        }
+
+        // If boss count is zero and a boss was active, reset the flag
+        if (bossCount === 0 && this.isBossActive) {
+            this.isBossActive = false;
+            console.log("Boss defeated! Resuming normal spawns.");
         }
     }
 
@@ -111,7 +136,28 @@ export class EnemyManager {
         }
     }
 
-    public getEnemies(): BaseEnemy[] {
+    private spawnBoss(bossInfo: BossSpawn) {
+        let boss: BaseBoss;
+
+        // This can be expanded with a factory or a switch for different boss types
+        switch (bossInfo.bossType) {
+            case 'sample_boss': // This key should be defined in EnemyData.ts
+                boss = new SampleBoss(bossInfo.bossType, this.enemyIdCounter++, bossInfo);
+                break;
+            default:
+                console.error(`Unknown boss type: ${bossInfo.bossType}. Spawning SampleBoss as fallback.`);
+                boss = new SampleBoss('sample_boss', this.enemyIdCounter++, bossInfo);
+                break;
+        }
+
+        this.setupEnemyPosition(boss); // Use the same off-screen positioning logic
+        this.enemies.push(boss);
+        this.container.addChild(boss);
+
+        UIManager.showBossHUD(boss.stats.name);
+    }
+
+    public getEnemies(): (BaseEnemy | BaseBoss)[] {
         return this.enemies;
     }
 }

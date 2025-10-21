@@ -30,6 +30,18 @@ async function build() {
         // Clean the dist directory
         await fs.emptyDir(distDir);
 
+        // Build WebAssembly module
+        console.log('Building WebAssembly module...');
+        const wasmPath = path.join('rust', 'collision_logic');
+        const wasmOutPath = path.resolve(__dirname, distDir, 'pkg'); // Use absolute path
+        try {
+            execSync(`wasm-pack build --target web --out-dir "${wasmOutPath}"`, { cwd: wasmPath, stdio: 'inherit' });
+            console.log('WebAssembly module built successfully.');
+        } catch (wasmError) {
+            console.error('Failed to build WebAssembly module.');
+            throw wasmError; // Propagate the error to stop the build
+        }
+
         // Build main TypeScript
         await esbuild.build({
             ...buildOptions,
