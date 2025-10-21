@@ -50,7 +50,6 @@ export class Game {
 
     private async loadAssetsAndStart() {
         await AssetManager.loadBundle('game-assets');
-        SoundManager.play('test_sound', true);
 
         const stageSelectScene = new StageSelectScene();
         SceneManager.changeScene(stageSelectScene);

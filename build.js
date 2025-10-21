@@ -8,65 +8,72 @@ const distDir = 'dist';
 const assetsDir = 'assets';
 
 async function build() {
-  try {
-    // Generate asset bundle
-    console.log('Generating asset bundle...');
-    execSync('node scripts/generate_assets.js', { stdio: 'inherit' });
+    try {
+        const isProduction = process.argv.includes('--prod');
+        console.log(`Running ${isProduction ? 'production' : 'development'} build...`);
 
-    // Clean the dist directory
-    await fs.emptyDir(distDir);
+        // Common esbuild options
+        const buildOptions = {
+            bundle: true,
+            sourcemap: !isProduction,
+            minify: isProduction,
+            target: 'esnext',
+            define: {
+                'process.env.NODE_ENV': isProduction ? "'production'" : "'development'",
+            },
+        };
 
-    // Build main TypeScript
-    await esbuild.build({
-      entryPoints: [path.join(srcDir, 'main.ts')],
-      bundle: true,
-      outfile: path.join(distDir, 'bundle.js'),
-      sourcemap: true,
-      minify: true,
-      target: 'esnext',
-      platform: 'browser',
-    });
+        // Generate asset bundle
+        console.log('Generating asset bundle...');
+        execSync('node scripts/generate_assets.js', { stdio: 'inherit' });
 
-    // Build Web Workers
-    const workerDir = path.join(srcDir, 'workers');
-    const workerFiles = await fs.readdir(workerDir);
-    for (const file of workerFiles) {
-      if (file.endsWith('.ts')) {
+        // Clean the dist directory
+        await fs.emptyDir(distDir);
+
+        // Build main TypeScript
         await esbuild.build({
-          entryPoints: [path.join(workerDir, file)],
-          bundle: true,
-          outfile: path.join(distDir, 'workers', file.replace('.ts', '.js')),
-          sourcemap: true,
-          minify: true,
-          target: 'esnext',
-          format: 'iife',
+            ...buildOptions,
+            entryPoints: [path.join(srcDir, 'main.ts')],
+            outfile: path.join(distDir, 'bundle.js'),
+            platform: 'browser',
         });
-      }
+
+        // Build Web Workers
+        const workerDir = path.join(srcDir, 'workers');
+        const workerFiles = await fs.readdir(workerDir);
+        for (const file of workerFiles) {
+            if (file.endsWith('.ts')) {
+                await esbuild.build({
+                    ...buildOptions,
+                    entryPoints: [path.join(workerDir, file)],
+                    outfile: path.join(distDir, 'workers', file.replace('.ts', '.js')),
+                    format: 'iife',
+                });
+            }
+        }
+
+        console.log('TypeScript build successful.');
+
+        // Copy HTML and CSS
+        await fs.copy(path.join(srcDir, 'index.html'), path.join(distDir, 'index.html'));
+        await fs.copy(path.join(srcDir, 'style.css'), path.join(distDir, 'style.css'));
+        console.log('HTML and CSS copied.');
+
+        // Copy assets
+        const assetsSrc = path.join(assetsDir);
+        const assetsDest = path.join(distDir, assetsDir);
+        if (fs.existsSync(assetsSrc)) {
+            await fs.copy(assetsSrc, assetsDest);
+            console.log('Assets copied.');
+        } else {
+            console.log('No assets directory found to copy.');
+        }
+
+        console.log('Build finished successfully!');
+    } catch (error) {
+        console.error('Build failed:', error);
+        process.exit(1);
     }
-
-    console.log('TypeScript build successful.');
-
-    // Copy HTML and CSS
-    await fs.copy(path.join(srcDir, 'index.html'), path.join(distDir, 'index.html'));
-    await fs.copy(path.join(srcDir, 'style.css'), path.join(distDir, 'style.css'));
-    console.log('HTML and CSS copied.');
-
-    // Copy assets
-    const assetsSrc = path.join(assetsDir);
-    const assetsDest = path.join(distDir, assetsDir);
-    if (fs.existsSync(assetsSrc)) {
-      await fs.copy(assetsSrc, assetsDest);
-      console.log('Assets copied.');
-    } else {
-        console.log('No assets directory found to copy.');
-    }
-
-
-    console.log('Build finished successfully!');
-  } catch (error) {
-    console.error('Build failed:', error);
-    process.exit(1);
-  }
 }
 
 build();

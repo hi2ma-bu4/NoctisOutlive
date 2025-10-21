@@ -1,21 +1,27 @@
+// src/game/TreasureManager.ts
+
 import * as PIXI from 'pixi.js';
 import { TreasureChest } from './TreasureChest';
 import { AssetManager } from '../core/AssetManager';
 import { Player } from './Player';
+import { SoundManager } from '../core/SoundManager';
 
 export class TreasureManager {
     private chests: TreasureChest[] = [];
     private container: PIXI.Container;
+    private onPickupCallback: () => void;
+    private chestIdCounter: number = 0;
 
-    constructor(container: PIXI.Container) {
+    constructor(container: PIXI.Container, onPickup: () => void) {
         this.container = container;
+        this.onPickupCallback = onPickup;
     }
 
     public spawnChest(position: PIXI.Point) {
         const chestTexture = AssetManager.getTexture('treasure_chest');
         if (!chestTexture) return;
 
-        const chest = new TreasureChest(chestTexture);
+        const chest = new TreasureChest(chestTexture, this.chestIdCounter++);
         chest.x = position.x;
         chest.y = position.y;
 
@@ -23,19 +29,22 @@ export class TreasureManager {
         this.container.addChild(chest);
     }
 
-    public update(delta: number, player: Player, onPickup: () => void) {
-        for (let i = this.chests.length - 1; i >= 0; i--) {
-            const chest = this.chests[i];
+    public update(delta: number, player: Player) {
+        // Collision detection is now handled by CollisionManager
+    }
 
-            const dx = player.x - chest.x;
-            const dy = player.y - chest.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < (player.width / 2) + (chest.width / 2)) {
-                onPickup();
-                chest.onPickup(); // This will destroy the chest object
-                this.chests.splice(i, 1);
-            }
+    public collectChest(chestId: number): void {
+        const chestIndex = this.chests.findIndex(c => c.id === chestId);
+        if (chestIndex > -1) {
+            const chest = this.chests[chestIndex];
+            this.onPickupCallback();
+            chest.onPickup(); // This will destroy the chest object
+            this.chests.splice(chestIndex, 1);
+            SoundManager.playSfx('sfx_item_pickup', 1.2); // Play slightly louder for emphasis
         }
+    }
+
+    public getChests(): TreasureChest[] {
+        return this.chests;
     }
 }

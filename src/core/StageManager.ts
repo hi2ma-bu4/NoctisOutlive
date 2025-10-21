@@ -1,26 +1,22 @@
+// src/core/StageManager.ts
 
-export interface StageData {
-    id: string;
-    name: string;
-    // Future properties: enemy types, boss, duration, etc.
-}
+import { StageData } from '../game/data/StageData';
+import { Stages } from '../game/data/Stages';
 
 export class StageManager {
     private static currentStage: StageData | null = null;
-    private static stages: Record<string, StageData> = {
-        'stage1': {
-            id: 'stage1',
-            name: 'Forest of Beginnings',
-        },
-        'stage2': {
-            id: 'stage2',
-            name: 'Cursed Highlands',
-        },
-    };
+    private static stages: Record<string, StageData> = {};
+
+    public static init() {
+        Stages.forEach(stage => {
+            this.stages[stage.id] = stage;
+        });
+    }
 
     public static setCurrentStage(stageId: string) {
         if (this.stages[stageId]) {
             this.currentStage = this.stages[stageId];
+            console.log(`Stage set to: ${this.currentStage.name}`);
         } else {
             console.error(`Stage with id '${stageId}' not found.`);
         }
@@ -30,5 +26,11 @@ export class StageManager {
         return this.currentStage;
     }
 
-    // Methods to get stage-specific data will be added here
+    public static getStage(stageId: string): StageData | null {
+        return this.stages[stageId] || null;
+    }
+
+    public static getAllStages(): StageData[] {
+        return Object.values(this.stages);
+    }
 }

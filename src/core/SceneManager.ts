@@ -1,5 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { IScene } from './IScene';
+import { StageManager } from './StageManager';
+import { SoundManager } from './SoundManager';
 
 export class SceneManager {
     private static currentScene: IScene | null = null;
@@ -18,6 +20,16 @@ export class SceneManager {
         this.currentScene = newScene;
         this.currentScene.init();
         this.app.stage.addChild(this.currentScene.container);
+
+        // Play music based on the current stage
+        const currentStage = StageManager.getCurrentStage();
+        if (currentStage && currentStage.music) {
+            SoundManager.playMusic(currentStage.music);
+        } else {
+            // Default music for scenes without a stage (like StageSelect)
+            SoundManager.playMusic('music_menu'); // Assuming a menu music track exists
+        }
+
         if (this.onSceneChange) {
             this.onSceneChange(newScene);
         }
