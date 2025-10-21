@@ -11,6 +11,7 @@ import { EffectManager } from '../core/EffectManager';
 import { UIManager } from '../core/UIManager';
 import { StageManager } from '../core/StageManager';
 import { EnemySpawn, BossSpawn } from './data/StageData';
+import { SoundManager } from '../core/SoundManager';
 
 export class EnemyManager {
     private enemies: (BaseEnemy | BaseBoss)[] = [];
@@ -74,6 +75,12 @@ export class EnemyManager {
                 const wasBoss = enemy instanceof BaseBoss;
                 EffectManager.createExplosion(enemy.position, wasBoss ? 0xFFD700 : 0xFFFFFF, wasBoss ? 2.0 : 1.0); // Bigger, golden explosion for bosses
                 this.experienceManager.spawnOrb(enemy.position, enemy.stats.expValue * (wasBoss ? 5 : 1));
+
+                if (wasBoss) {
+                    SoundManager.playSfx('sfx_boss_death', 1.0);
+                } else {
+                    SoundManager.playSfx('sfx_enemy_death', 0.7);
+                }
 
                 // Drop treasure chest: 100% for boss, 20% for normal
                 if (wasBoss || Math.random() < 0.2) {
