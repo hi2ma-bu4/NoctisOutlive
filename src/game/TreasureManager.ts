@@ -5,14 +5,15 @@ import { TreasureChest } from './TreasureChest';
 import { AssetManager } from '../core/AssetManager';
 import { Player } from './Player';
 import { SoundManager } from '../core/SoundManager';
+import { IReward, RewardManager } from '../core/RewardManager';
 
 export class TreasureManager {
     private chests: TreasureChest[] = [];
     private container: PIXI.Container;
-    private onPickupCallback: () => void;
+    private onPickupCallback: (rewards: IReward[]) => void;
     private chestIdCounter: number = 0;
 
-    constructor(container: PIXI.Container, onPickup: () => void) {
+    constructor(container: PIXI.Container, onPickup: (rewards: IReward[]) => void) {
         this.container = container;
         this.onPickupCallback = onPickup;
     }
@@ -37,7 +38,11 @@ export class TreasureManager {
         const chestIndex = this.chests.findIndex(c => c.id === chestId);
         if (chestIndex > -1) {
             const chest = this.chests[chestIndex];
-            this.onPickupCallback();
+
+            // Generate rewards and pass them to the callback
+            const rewards = RewardManager.generateRewards(3);
+            this.onPickupCallback(rewards);
+
             chest.onPickup(); // This will destroy the chest object
             this.chests.splice(chestIndex, 1);
             SoundManager.playSfx('sfx_item_pickup', 1.2); // Play slightly louder for emphasis

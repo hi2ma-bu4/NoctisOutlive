@@ -9,9 +9,13 @@ import { SoundManager } from '../core/SoundManager';
 export class ExperienceManager {
     private orbs: ExperienceOrb[] = [];
     private container: PIXI.Container;
+    private player: Player;
+    private onLevelUp: () => void;
 
-    constructor(container: PIXI.Container) {
+    constructor(container: PIXI.Container, player: Player, onLevelUp: () => void) {
         this.container = container;
+        this.player = player;
+        this.onLevelUp = onLevelUp;
     }
 
     public spawnOrb(position: PIXI.Point, value: number) {
@@ -35,9 +39,15 @@ export class ExperienceManager {
         const orbIndex = this.orbs.findIndex(o => o.id === orbId);
         if (orbIndex > -1) {
             const orb = this.orbs[orbIndex];
+
+            // Add experience to the player and check for level up
+            if (this.player.addExperience(orb.value)) {
+                this.onLevelUp();
+            }
+
             orb.onPickup();
             this.orbs.splice(orbIndex, 1);
-            SoundManager.playSfx('sfx_item_pickup', 0.8); // Play at slightly lower volume
+            SoundManager.playSfx('sfx_item_pickup', 0.8);
         }
     }
 

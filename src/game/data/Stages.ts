@@ -5,41 +5,65 @@ import { StageData, StageType } from './StageData';
 export const Stages: StageData[] = [
     {
         id: 'stage-1',
-        name: 'Standard Forest',
+        name: 'Whispering Woods',
         type: StageType.STANDARD,
-        description: 'A standard stage with regular enemies.',
+        description: 'A haunted forest teeming with slimes and bats.',
         background: 'background-forest',
         music: 'music-forest',
         enemies: [
             { enemyType: 'slime', spawnTime: 0, spawnCount: 10 },
             { enemyType: 'bat', spawnTime: 30, spawnCount: 15 },
+            { enemyType: 'slime', spawnTime: 60, spawnCount: 20 },
+            { enemyType: 'bat', spawnTime: 90, spawnCount: 25 },
         ],
         bosses: [
-            { bossType: 'goblin-shaman', spawnTime: 180, isMidBoss: true },
-            { bossType: 'ogre', spawnTime: 600, isMidBoss: false },
+            {
+                bossType: 'sample_boss', // Using SampleBoss for now
+                spawnTime: 180,
+                isMidBoss: true,
+                aiType: 'caster',
+                healthMultiplier: 1.5,
+                abilities: ['aoe_slam']
+            }
         ],
     },
     {
         id: 'stage-2',
-        name: 'Cursed Graveyard',
+        name: 'Sunken Crypt',
         type: StageType.HIGH_DIFFICULTY,
-        description: 'A high-difficulty stage with powerful foes.',
+        description: 'Vicious undead guard this cursed tomb.',
         background: 'background-graveyard',
         music: 'music-graveyard',
         enemies: [
             { enemyType: 'zombie', spawnTime: 0, spawnCount: 20 },
             { enemyType: 'ghost', spawnTime: 45, spawnCount: 10 },
+            { enemyType: 'zombie', spawnTime: 90, spawnCount: 30 },
+            { enemyType: 'ghost', spawnTime: 120, spawnCount: 20 },
         ],
         bosses: [
-            { bossType: 'necromancer', spawnTime: 240, isMidBoss: true },
-            { bossType: 'lich', spawnTime: 720, isMidBoss: false },
-        ],
+            {
+                bossType: 'sample_boss',
+                spawnTime: 240,
+                isMidBoss: true,
+                aiType: 'charger',
+                healthMultiplier: 2.0,
+                abilities: ['summon_minions', 'aoe_slam']
+            },
+            {
+                bossType: 'sample_boss', // Final Boss
+                spawnTime: 600,
+                isMidBoss: false,
+                aiType: 'caster',
+                healthMultiplier: 3.0,
+                abilities: ['summon_minions', 'aoe_slam']
+            }
+        ]
     },
     {
         id: 'shop-1',
-        name: 'Mysterious Shop',
+        name: 'Goblin Market',
         type: StageType.SHOP,
-        description: 'Buy, sell, and upgrade items.',
+        description: 'Spend your hard-earned gold.',
         background: 'background-shop',
         music: 'music-shop',
         enemies: [],
@@ -47,9 +71,9 @@ export const Stages: StageData[] = [
     },
     {
         id: 'event-1',
-        name: 'Whispering Fountain',
+        name: 'Ancient Shrine',
         type: StageType.EVENT,
-        description: 'An event stage with choices and consequences.',
+        description: 'Make a choice, face the consequences.',
         background: 'background-fountain',
         music: 'music-fountain',
         enemies: [],

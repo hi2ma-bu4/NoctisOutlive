@@ -14,9 +14,12 @@ export interface EnemySpawn {
 }
 
 export interface BossSpawn {
-    bossType: string;
-    spawnTime: number;
-    isMidBoss: boolean;
+    bossType: string;         // A key from EnemyData, defining the boss's base stats.
+    spawnTime: number;        // Time in seconds from the start of the stage.
+    isMidBoss: boolean;       // True for mid-boss, false for the final boss of the stage.
+    aiType: 'default' | 'charger' | 'caster'; // Defines the behavior pattern.
+    healthMultiplier: number; // Multiplier for the base health from EnemyData.
+    abilities: string[];      // List of special abilities the boss can use.
 }
 
 export interface StageData {
