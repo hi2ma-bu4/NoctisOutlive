@@ -1,10 +1,13 @@
+// src/game/WeaponManager.ts
+
 import * as PIXI from 'pixi.js';
 import { Projectile } from './Projectile';
 import { AssetManager } from '../core/AssetManager';
-import { Enemy } from './Enemy';
+import { BaseEnemy } from './BaseEnemy';
 import { EnemyManager } from './EnemyManager';
 import { Player } from './Player';
 import { EffectManager } from '../core/EffectManager';
+import { SoundManager } from '../core/SoundManager';
 
 export class WeaponManager {
     private projectiles: Projectile[] = [];
@@ -12,17 +15,11 @@ export class WeaponManager {
     private enemyManager: EnemyManager;
     private fireTimer: number = 0;
     private fireRate: number = 1000; // ms
-    private collisionWorker: Worker;
     private projectileIdCounter: number = 0;
 
     constructor(container: PIXI.Container, enemyManager: EnemyManager) {
         this.container = container;
         this.enemyManager = enemyManager;
-
-        this.collisionWorker = new Worker('workers/CollisionWorker.js');
-        this.collisionWorker.onmessage = (event) => {
-            this.handleCollisions(event.data.collisions);
-        };
     }
 
     public update(delta: number, player: Player) {
@@ -39,35 +36,23 @@ export class WeaponManager {
             this.fireTimer = 0;
             this.fire(player);
         }
-
-        // Post data to the collision worker
-        const projectileData = this.projectiles.map(p => ({ id: p.id, x: p.x, y: p.y, width: p.width, height: p.height }));
-        const enemyData = this.enemyManager.getEnemies().map(e => ({ id: e.id, x: e.x, y: e.y, width: e.width, height: e.height }));
-
-        if(projectileData.length > 0 && enemyData.length > 0) {
-            this.collisionWorker.postMessage({
-                projectiles: projectileData,
-                enemies: enemyData,
-            });
-        }
     }
 
-    private handleCollisions(collisions: { projectileId: number; enemyId: number }[]) {
-        for (const collision of collisions) {
-            const projectile = this.projectiles.find(p => p.id === collision.projectileId);
-            const enemy = this.enemyManager.getEnemies().find(e => e.id === collision.enemyId);
+    public handleCollision(projectileId: number, enemyId: number, player: Player) {
+        const projectile = this.projectiles.find(p => p.id === projectileId);
+        const enemy = this.enemyManager.getEnemies().find(e => e.id === enemyId);
 
-            if (projectile && enemy && !projectile.destroyed && !enemy.destroyed) {
-                enemy.takeDamage(projectile.damage);
-                EffectManager.createExplosion(projectile.position, 3);
+        if (projectile && enemy && !projectile.destroyed && !enemy.isDead()) {
+            enemy.takeDamage(projectile.damage * player.damageMultiplier);
+            EffectManager.createExplosion(projectile.position, 3);
+            SoundManager.playSfx('sfx_projectile_hit');
 
-                // Remove projectile from array and stage
-                const projIndex = this.projectiles.indexOf(projectile);
-                if (projIndex > -1) {
-                    this.projectiles.splice(projIndex, 1);
-                }
-                projectile.destroy();
+            // Remove projectile from array and stage
+            const projIndex = this.projectiles.indexOf(projectile);
+            if (projIndex > -1) {
+                this.projectiles.splice(projIndex, 1);
             }
+            projectile.destroy();
         }
     }
 
@@ -79,7 +64,7 @@ export class WeaponManager {
         if (enemies.length === 0) return;
 
         // Find the closest enemy
-        let closestEnemy: Enemy | null = null;
+        let closestEnemy: BaseEnemy | null = null;
         let minDistance = Infinity;
         for (const enemy of enemies) {
             const dx = enemy.x - player.x;
@@ -106,5 +91,9 @@ export class WeaponManager {
             this.projectiles.push(projectile);
             this.container.addChild(projectile);
         }
+    }
+
+    public getProjectiles(): Projectile[] {
+        return this.projectiles;
     }
 }

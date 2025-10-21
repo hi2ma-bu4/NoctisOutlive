@@ -1,15 +1,23 @@
+// src/game/data/ItemData.ts
+
 export enum ItemType {
-    WEAPON,
-    PASSIVE,
-    CONSUMABLE,
+    WEAPON = 'weapon',
+    PASSIVE = 'passive',
+    CONSUMABLE = 'consumable',
+    BACKPACK_PIECE = 'backpack_piece', // For expanding the backpack
 }
 
 export enum Rarity {
-    COMMON,
-    UNCOMMON,
-    RARE,
-    EPIC,
-    LEGENDARY,
+    COMMON = 'common',
+    UNCOMMON = 'uncommon',
+    RARE = 'rare',
+    EPIC = 'epic',
+    LEGENDARY = 'legendary',
+}
+
+export interface ItemEffect {
+    type: string; // e.g., 'damage_boost', 'health_increase', 'backpack_expand'
+    value: any;   // The magnitude of the effect (e.g., 0.1 for 10% boost, or { width: 1, height: 0 } for expansion)
 }
 
 export interface ItemData {
@@ -19,5 +27,10 @@ export interface ItemData {
     type: ItemType;
     rarity: Rarity;
     textureAlias: string;
-    // Effects will be handled by a separate system
+
+    // For grid-based backpack
+    width: number;  // Width in grid cells
+    height: number; // Height in grid cells
+
+    effects: ItemEffect[];
 }

@@ -1,10 +1,10 @@
+// src/game/ui/LootBoxUI.ts
+
 import * as PIXI from 'pixi.js';
 import { ItemChoice } from './ItemChoice';
-import { ItemData } from '../data/ItemData';
-import { ITEMS } from '../data/Items';
+import { ItemData, ItemType } from '../data/ItemData';
+import { getLootChoices } from '../data/Items';
 import { Player } from '../Player';
-import { Item } from '../Item';
-import { AssetManager } from '../../core/AssetManager';
 
 export class LootBoxUI extends PIXI.Container {
     private player: Player;
@@ -14,7 +14,7 @@ export class LootBoxUI extends PIXI.Container {
         super();
         this.player = player;
         this.onChoice = onChoice;
-        this.interactive = true; // Block clicks from propagating to the game world
+        this.interactive = true;
         this.createUI();
     }
 
@@ -22,23 +22,23 @@ export class LootBoxUI extends PIXI.Container {
         // Background overlay
         const overlay = new PIXI.Graphics();
         const screen = (this.parent as any)?.renderer.screen;
-        overlay.beginFill(0x000000, 0.7);
-        overlay.drawRect(0, 0, screen.width, screen.height);
-        overlay.endFill();
+        overlay.rect(0, 0, screen.width, screen.height);
+        overlay.fill(0x000000, 0.8);
         this.addChild(overlay);
 
+        // Title
+        const title = new PIXI.Text('Choose Your Loot!', { fontSize: 48, fill: 0xFFD700 });
+        title.anchor.set(0.5);
+        title.x = screen.width / 2;
+        title.y = 150;
+        this.addChild(title);
+
         // Get 3 random items
-        const itemKeys = Object.keys(ITEMS);
-        const choices: ItemData[] = [];
-        while (choices.length < 3 && itemKeys.length > 0) {
-            const randomIndex = Math.floor(Math.random() * itemKeys.length);
-            const key = itemKeys.splice(randomIndex, 1)[0];
-            choices.push(ITEMS[key]);
-        }
+        const choices = getLootChoices(3);
 
         // Display choices
-        const choiceWidth = 200;
-        const spacing = 50;
+        const choiceWidth = 250;
+        const spacing = 60;
         const totalWidth = (choiceWidth * choices.length) + (spacing * (choices.length - 1));
         const startX = (screen.width - totalWidth) / 2;
 
@@ -48,22 +48,20 @@ export class LootBoxUI extends PIXI.Container {
             itemChoice.y = (screen.height - itemChoice.height) / 2;
 
             itemChoice.on('pointertap', () => this.selectItem(itemData));
-
             this.addChild(itemChoice);
         });
     }
 
     private selectItem(itemData: ItemData) {
-        const itemTexture = AssetManager.getTexture(itemData.textureAlias);
-        if (itemTexture) {
-            const newItem = new Item(itemTexture);
-            // Here you would add the item's effect to the player
+        // Apply item effects
+        this.player.applyItemEffects(itemData);
 
-            if (this.player.backpack.addItem(newItem)) {
+        // If the item is not a backpack piece, try to add it to the backpack
+        if (itemData.type !== ItemType.BACKPACK_PIECE) {
+            if (this.player.backpack.addItem(itemData)) {
                 console.log(`Added ${itemData.name} to backpack.`);
             } else {
-                console.log("Backpack is full!");
-                // What to do if backpack is full? For now, the item is lost.
+                console.log("Backpack is full! Item was not added, but effects were applied.");
             }
         }
 

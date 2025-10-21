@@ -1,8 +1,13 @@
+// src/game/scenes/StageSelectScene.ts
+
 import * as PIXI from 'pixi.js';
 import { IScene } from '../../core/IScene';
 import { SceneManager } from '../../core/SceneManager';
 import { StageManager } from '../../core/StageManager';
 import { GameScene } from './GameScene';
+import { ShopScene } from './ShopScene'; // To be created
+import { EventScene } from './EventScene'; // To be created
+import { StageType } from '../data/StageData';
 
 export class StageSelectScene implements IScene {
     public container: PIXI.Container;
@@ -12,38 +17,79 @@ export class StageSelectScene implements IScene {
     }
 
     public init(): void {
-        const title = new PIXI.Text('Select a Stage', { fontSize: 48, fill: 0xFFFFFF });
-        title.x = (window.innerWidth - title.width) / 2;
+        const title = new PIXI.Text('Select a Stage', {
+            fontSize: 48,
+            fill: 0xFFFFFF,
+            stroke: 0x000000,
+            strokeThickness: 6,
+        });
+        title.anchor.set(0.5);
+        title.x = window.innerWidth / 2;
         title.y = 100;
         this.container.addChild(title);
 
-        const stageButton = new PIXI.Graphics();
-        stageButton.beginFill(0x00AA00);
-        stageButton.drawRect(0, 0, 300, 100);
-        stageButton.endFill();
-        stageButton.x = (window.innerWidth - stageButton.width) / 2;
-        stageButton.y = 300;
-        stageButton.interactive = true;
-        stageButton.cursor = 'pointer';
+        StageManager.init(); // Initialize the stages
+        const allStages = StageManager.getAllStages();
+        const buttonWidth = 400;
+        const buttonHeight = 120;
+        const padding = 20;
+        const startY = 200;
 
-        const buttonText = new PIXI.Text('Stage 1: Forest', { fontSize: 24, fill: 0xFFFFFF });
-        buttonText.x = (stageButton.width - buttonText.width) / 2;
-        buttonText.y = (stageButton.height - buttonText.height) / 2;
-        stageButton.addChild(buttonText);
+        allStages.forEach((stage, index) => {
+            const button = new PIXI.Graphics();
+            button.rect(0, 0, buttonWidth, buttonHeight);
+            button.fill(0x00AA00);
+            button.stroke({ width: 4, color: 0x006600 });
+            button.x = (window.innerWidth - buttonWidth) / 2;
+            button.y = startY + index * (buttonHeight + padding);
+            button.interactive = true;
+            button.cursor = 'pointer';
 
-        stageButton.on('pointertap', () => {
-            StageManager.setCurrentStage('stage1');
-            SceneManager.changeScene(new GameScene());
+            const buttonTextName = new PIXI.Text(stage.name, {
+                fontSize: 28,
+                fill: 0xFFFFFF,
+                wordWrap: true,
+                wordWrapWidth: buttonWidth - 20,
+            });
+            buttonTextName.x = 15;
+            buttonTextName.y = 15;
+            button.addChild(buttonTextName);
+
+            const buttonTextDesc = new PIXI.Text(stage.description, {
+                fontSize: 18,
+                fill: 0xDDDDDD,
+                wordWrap: true,
+                wordWrapWidth: buttonWidth - 20,
+            });
+            buttonTextDesc.x = 15;
+            buttonTextDesc.y = buttonTextName.y + buttonTextName.height + 10;
+            button.addChild(buttonTextDesc);
+
+            button.on('pointertap', () => {
+                StageManager.setCurrentStage(stage.id);
+                switch (stage.type) {
+                    case StageType.STANDARD:
+                    case StageType.HIGH_DIFFICULTY:
+                        SceneManager.changeScene(new GameScene());
+                        break;
+                    case StageType.SHOP:
+                        SceneManager.changeScene(new ShopScene());
+                        break;
+                    case StageType.EVENT:
+                        SceneManager.changeScene(new EventScene());
+                        break;
+                }
+            });
+
+            this.container.addChild(button);
         });
-
-        this.container.addChild(stageButton);
     }
 
     public update(delta: PIXI.Ticker): void {
-        // No update logic needed for this simple scene
+        // No update logic needed for this scene
     }
 
     public destroy(): void {
-        this.container.destroy();
+        this.container.destroy({ children: true, texture: true, baseTexture: true });
     }
 }
