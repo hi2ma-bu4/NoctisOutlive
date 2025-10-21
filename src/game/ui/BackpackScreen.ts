@@ -1,171 +1,125 @@
 // src/game/ui/BackpackScreen.ts
-
 import * as PIXI from 'pixi.js';
 import { Backpack } from '../Backpack';
-import { InputManager, MouseButton } from '../../core/InputManager';
 import { Item, SLOT_SIZE } from '../Item';
-import { UIManager } from '../../core/UIManager';
+import { SoundManager } from '../../core/SoundManager';
+import { InputManager } from '../../core/InputManager';
 
 export class BackpackScreen extends PIXI.Container {
     private backpack: Backpack;
     private onClose: () => void;
-    private originalParent: PIXI.Container;
-    private originalPosition: PIXI.Point;
 
     private draggedItem: Item | null = null;
     private dragOffset = new PIXI.Point();
-    private placementIndicator: PIXI.Graphics;
 
     constructor(backpack: Backpack, onClose: () => void) {
         super();
-        this.name = 'BackpackScreen';
         this.backpack = backpack;
         this.onClose = onClose;
+        this.name = 'BackpackScreen';
+
         this.interactive = true;
-
-        this.originalParent = this.backpack.parent;
-        this.originalPosition = this.backpack.position.clone();
-
-        this.placementIndicator = new PIXI.Graphics();
-        this.backpack.addChild(this.placementIndicator);
-
-        this.createUI();
-        this.setupInteractions();
+        this.setupUI();
+        this.setupDragEvents();
     }
 
-    private createUI(): void {
-        const screen = UIManager.getScreenSize();
+    private setupUI(): void {
+        const screen = (this.parent as any)?.renderer.screen || { width: 1280, height: 720 };
 
         const overlay = new PIXI.Graphics();
         overlay.rect(0, 0, screen.width, screen.height);
         overlay.fill({ color: 0x000000, alpha: 0.85 });
+        overlay.interactive = true;
         this.addChild(overlay);
 
-        const title = new PIXI.Text('Organize Your Backpack', { fontSize: 48, fill: 0xFFFFFF });
+        const title = new PIXI.Text('Backpack', { fontSize: 48, fill: 0xFFFFFF, fontWeight: 'bold' });
         title.anchor.set(0.5);
         title.x = screen.width / 2;
         title.y = 80;
         this.addChild(title);
 
-        this.backpack.position.set(
-            (screen.width - this.backpack.width) / 2,
-            (screen.height - this.backpack.height) / 2
-        );
+        // Center the backpack on the screen
+        this.backpack.x = (screen.width - this.backpack.width) / 2;
+        this.backpack.y = (screen.height - this.backpack.height) / 2;
         this.addChild(this.backpack);
 
-        const instruction = new PIXI.Text('Drag to move, Right-click to rotate, B to close', { fontSize: 24, fill: 0xCCCCCC });
-        instruction.anchor.set(0.5);
-        instruction.x = screen.width / 2;
-        instruction.y = screen.height - 80;
-        this.addChild(instruction);
+        const closeButton = new PIXI.Text('Close [B]', { fontSize: 24, fill: 0xFFD700 });
+        closeButton.anchor.set(0.5);
+        closeButton.x = screen.width / 2;
+        closeButton.y = screen.height - 80;
+        closeButton.interactive = true;
+        closeButton.on('pointertap', () => this.close());
+        this.addChild(closeButton);
     }
 
-    private setupInteractions(): void {
-        this.backpack.getItems().forEach(item => this.makeItemInteractive(item));
-
-        // Add a ticker to handle drag updates
-        PIXI.Ticker.shared.add(this.onDragUpdate, this);
+    private setupDragEvents(): void {
+        this.backpack.itemContainer.interactive = true;
+        this.backpack.itemContainer.on('pointerdown', this.onDragStart, this);
+        this.on('pointerup', this.onDragEnd, this);
+        this.on('pointerupoutside', this.onDragEnd, this);
+        this.on('pointermove', this.onDragMove, this);
     }
 
-    private makeItemInteractive(item: Item): void {
-        item.interactive = true;
-        item.cursor = 'pointer';
+    private onDragStart(event: PIXI.FederatedPointerEvent): void {
+        const item = event.target as Item;
+        if (item && item instanceof Item) {
+            this.draggedItem = item;
 
-        item.on('mousedown', (e) => this.onItemDragStart(e, item));
-        item.on('mouseup', (e) => this.onItemDragEnd(e, item));
-        item.on('rightdown', (e) => this.onItemRightClick(e, item));
+            // Bring item to the top
+            this.backpack.itemContainer.addChild(this.draggedItem);
+
+            const localPos = event.getLocalPosition(this.draggedItem);
+            this.dragOffset.set(localPos.x, localPos.y);
+
+            this.backpack.unplaceItem(this.draggedItem);
+            SoundManager.playSfx('sfx_item_pickup', 0.8);
+
+            // Handle item rotation on right-click
+            if (event.button === 2) { // Right mouse button
+                this.backpack.tryToRotateItem(this.draggedItem);
+                SoundManager.playSfx('sfx_item_rotate');
+            }
+        }
     }
 
-    private onItemDragStart(event: PIXI.FederatedMouseEvent, item: Item): void {
-        if (event.button !== MouseButton.LEFT) return;
-
-        this.draggedItem = item;
-        const localPos = this.backpack.toLocal(event.global);
-        this.dragOffset.set(localPos.x - item.x, localPos.y - item.y);
-
-        // Bring item to top
-        this.backpack.addChild(item);
-
-        // Temporarily un-place from grid to allow placement checks
-        this.backpack.unplaceItem(item);
+    private onDragMove(event: PIXI.FederatedPointerEvent): void {
+        if (this.draggedItem) {
+            const newPos = event.getLocalPosition(this.backpack.itemContainer);
+            this.draggedItem.x = newPos.x - this.dragOffset.x;
+            this.draggedItem.y = newPos.y - this.dragOffset.y;
+        }
     }
 
-    private onItemDragEnd(event: PIXI.FederatedMouseEvent, item: Item): void {
+    private onDragEnd(event: PIXI.FederatedPointerEvent): void {
         if (!this.draggedItem) return;
 
-        const localPos = this.backpack.toLocal(InputManager.getMousePosition());
-        const gridPos = this.getGridPosition(localPos);
+        const localPos = event.getLocalPosition(this.backpack);
+        const gridX = Math.round((localPos.x - this.draggedItem.width / 2) / SLOT_SIZE);
+        const gridY = Math.round((localPos.y - this.draggedItem.height / 2) / SLOT_SIZE);
 
-        if (this.backpack.isSpaceAvailable(gridPos.x, gridPos.y, item.data.width, item.data.height)) {
-            this.backpack.placeItem(item, gridPos.x, gridPos.y);
+        if (this.backpack.isSpaceAvailable(gridX, gridY, this.draggedItem.data.width, this.draggedItem.data.height)) {
+            this.backpack.placeItem(this.draggedItem, gridX, gridY);
+            SoundManager.playSfx('sfx_item_drop', 0.8);
         } else {
-            // If the target space is not available, find the first available space and place it there.
-            const emptySpot = this.backpack.findEmptySpace(item.data.width, item.data.height);
-            if (emptySpot) {
-                this.backpack.placeItem(item, emptySpot.x, emptySpot.y);
+            // If no valid spot, add it back to the first available spot
+            const pos = this.backpack.findEmptySpace(this.draggedItem.data.width, this.draggedItem.data.height);
+            if(pos) {
+                this.backpack.placeItem(this.draggedItem, pos.x, pos.y);
             } else {
-                // This is a critical error: the item was picked up, but there's no space left.
-                // This shouldn't happen if the logic is correct.
-                console.error("CRITICAL: No space to return dragged item to the backpack!");
-                // As a last resort, we will just add it to the item container so it's not lost.
-                this.backpack.itemContainer.addChild(item);
-                this.backpack.items.push(item);
+                // This case should be rare, but as a fallback, we remove the item
+                 this.backpack.removeItem(this.draggedItem);
+                 console.error("No space to return dragged item. Item removed.");
             }
+            SoundManager.playSfx('sfx_error', 0.7);
         }
 
         this.draggedItem = null;
-        this.placementIndicator.clear();
-    }
-
-    private onItemRightClick(event: PIXI.FederatedMouseEvent, item: Item): void {
-        if (this.draggedItem) return; // Don't rotate while dragging
-
-        this.backpack.tryToRotateItem(item);
-    }
-
-    private onDragUpdate(): void {
-        if (!this.draggedItem) return;
-
-        const mousePos = InputManager.getMousePosition();
-        const localPos = this.backpack.toLocal(mousePos);
-
-        this.draggedItem.x = localPos.x - this.dragOffset.x;
-        this.draggedItem.y = localPos.y - this.dragOffset.y;
-
-        this.updatePlacementIndicator();
-    }
-
-    private updatePlacementIndicator(): void {
-        if (!this.draggedItem) return;
-
-        const gridPos = this.getGridPosition(this.draggedItem.position);
-        const isValid = this.backpack.isSpaceAvailable(gridPos.x, gridPos.y, this.draggedItem.data.width, this.draggedItem.data.height);
-
-        this.placementIndicator.clear();
-        this.placementIndicator.rect(
-            gridPos.x * SLOT_SIZE,
-            gridPos.y * SLOT_SIZE,
-            this.draggedItem.data.width * SLOT_SIZE,
-            this.draggedItem.data.height * SLOT_SIZE
-        );
-        this.placementIndicator.fill({ color: isValid ? 0x00FF00 : 0xFF0000, alpha: 0.5 });
-    }
-
-    private getGridPosition(localPoint: PIXI.Point): { x: number, y: number } {
-        return {
-            x: Math.round((localPoint.x - (this.draggedItem?.width ?? 0) / 2) / SLOT_SIZE),
-            y: Math.round((localPoint.y - (this.draggedItem?.height ?? 0) / 2) / SLOT_SIZE)
-        };
     }
 
     public close(): void {
-        // Return backpack to its original state
-        this.originalParent.addChild(this.backpack);
-        this.backpack.position.copyFrom(this.originalPosition);
-
-        // Cleanup
-        PIXI.Ticker.shared.remove(this.onDragUpdate, this);
+        // Before closing, move the backpack back to its original parent (the main UI container)
+        UIManager.container.addChild(this.backpack);
         this.onClose();
-        this.destroy({ children: true });
+        this.destroy();
     }
 }

@@ -73,6 +73,7 @@ export class GameScene implements IScene {
 
     private handleLevelUp(): void {
         console.log("Level up detected! Generating rewards...");
+        SoundManager.playSfx('sfx_level_up');
         const rewards = RewardManager.generateRewards(3);
         this.showRewardScreen(rewards);
     }

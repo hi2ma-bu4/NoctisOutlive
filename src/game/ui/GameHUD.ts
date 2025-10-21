@@ -8,8 +8,7 @@ export class GameHUD extends PIXI.Container {
     private hpText: PIXI.Text;
     private levelText: PIXI.Text;
     private timerText: PIXI.Text;
-
-    // TODO: Add experience bar
+    private expBar: PIXI.Graphics;
 
     constructor() {
         super();
@@ -19,6 +18,7 @@ export class GameHUD extends PIXI.Container {
     private setupUI(): void {
         const barWidth = 200;
         const barHeight = 20;
+        const expBarHeight = 10;
 
         // HP Bar
         const hpBarContainer = new PIXI.Container();
@@ -38,9 +38,22 @@ export class GameHUD extends PIXI.Container {
         this.hpText.position.set(barWidth / 2, barHeight / 2);
         hpBarContainer.addChild(this.hpText);
 
+        // Experience Bar
+        const expBarContainer = new PIXI.Container();
+        expBarContainer.position.set(20, 45); // Below HP bar
+        this.addChild(expBarContainer);
+
+        const expBarBackground = new PIXI.Graphics();
+        expBarBackground.rect(0, 0, barWidth, expBarHeight);
+        expBarBackground.fill(0x000000, 0.7);
+        expBarContainer.addChild(expBarBackground);
+
+        this.expBar = new PIXI.Graphics();
+        expBarContainer.addChild(this.expBar);
+
         // Level Text
         this.levelText = new PIXI.Text('Level: 1', { fontSize: 24, fill: 0xFFD700, stroke: { color: 0x000000, width: 4 }});
-        this.levelText.position.set(20, 50);
+        this.levelText.position.set(20, 60); // Pushed down
         this.addChild(this.levelText);
 
         // Timer Text
@@ -58,8 +71,14 @@ export class GameHUD extends PIXI.Container {
         this.hpBar.fill(0xFF0000);
         this.hpText.text = `${Math.ceil(player.currentHealth)} / ${player.maxHealth}`;
 
-        // TODO: Update Level Text based on player's experience
-        // this.levelText.text = `Level: ${player.level}`;
+        // Update Experience Bar
+        const expPercent = player.experience / player.experienceToNextLevel;
+        this.expBar.clear();
+        this.expBar.rect(0, 0, 200 * expPercent, 10);
+        this.expBar.fill(0x32CD32); // LimeGreen for experience
+
+        // Update Level Text
+        this.levelText.text = `Level: ${player.level}`;
 
         // Update Timer
         const minutes = Math.floor(stageTimer / 60).toString().padStart(2, '0');
