@@ -14,9 +14,10 @@ export class OrcChieftain extends BaseBoss {
         enemyType: string,
         id: number,
         bossData: BossSpawn,
-        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void
+        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void,
+        spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void
     ) {
-        super(enemyType, id, bossData, spawnEnemyCallback);
+        super(enemyType, id, bossData, spawnEnemyCallback, spawnProjectileCallback);
         this.chargeSpeed = this.stats.speed * 3;
     }
 

@@ -79,4 +79,32 @@ export const EnemyDatabase: Record<string, EnemyStats> = {
         attack: 40,
         scale: 2.8,
     },
+
+    // High-Difficulty Enemies
+    'hellhound': {
+        type: 'hellhound',
+        textureKey: 'enemy-bat', // Placeholder
+        health: 100,
+        speed: 3.5,
+        attack: 25,
+        scale: 1.2,
+    },
+    'golem': {
+        type: 'golem',
+        textureKey: 'enemy-zombie', // Placeholder
+        health: 300,
+        speed: 0.8,
+        attack: 40,
+        scale: 1.8,
+    },
+
+    // High-Difficulty Boss
+    'hydra': {
+        type: 'hydra',
+        textureKey: 'boss-ogre', // Placeholder
+        health: 2500,
+        speed: 1.0,
+        attack: 60,
+        scale: 3.5,
+    },
 };

@@ -10,16 +10,20 @@ export abstract class BaseBoss extends BaseEnemy {
     private abilityCooldowns: Map<string, number> = new Map();
     private phase: number = 1;
 
+    protected spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void;
+
     constructor(
         enemyType: string,
         id: number,
         bossData: BossSpawn,
         // Optional callback to allow bosses to spawn minions
-        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void = () => {}
+        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void = () => {},
+        spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void = () => {}
     ) {
         super(enemyType, id);
         this.bossData = bossData;
         this.spawnEnemyCallback = spawnEnemyCallback;
+        this.spawnProjectileCallback = spawnProjectileCallback;
 
         // Apply health multiplier
         this.stats.health *= this.bossData.healthMultiplier;
