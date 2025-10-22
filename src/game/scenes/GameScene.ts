@@ -118,7 +118,7 @@ export class GameScene implements IScene {
         this.stageTimer += delta.deltaTime / 60;
 
         this.player.update(delta.deltaTime);
-        this.enemyManager.update(delta.deltaTime, this.player.position);
+        this.enemyManager.update(delta.deltaTime, this.player);
         this.experienceManager.update(delta.deltaTime);
         this.weaponManager.update(delta.deltaTime, this.player);
         this.treasureManager.update(delta.deltaTime, this.player);

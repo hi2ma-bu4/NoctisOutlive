@@ -5,10 +5,10 @@ import * as PIXI from 'pixi.js';
 
 export class HydraBoss extends BaseBoss {
 
-    protected useAbility(ability: string, playerPosition: PIXI.Point): void {
+    protected useAbility(ability: string, player: import('../Player').Player): void {
         switch (ability) {
             case 'multi-attack':
-                this.multiAttack(playerPosition);
+                this.multiAttack(player.position);
                 break;
             case 'regenerate':
                 this.regenerate();

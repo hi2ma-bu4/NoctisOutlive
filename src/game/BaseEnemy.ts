@@ -32,8 +32,8 @@ export class BaseEnemy extends PIXI.Sprite {
         this.scale.set(this.stats.scale);
     }
 
-    public update(delta: number, playerPosition: PIXI.Point): void {
-        this.move(delta, playerPosition);
+    public update(delta: number, player: import('./Player').Player): void {
+        this.move(delta, player.position);
     }
 
     protected move(delta: number, playerPosition: PIXI.Point): void {

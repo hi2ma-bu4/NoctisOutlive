@@ -16,7 +16,7 @@ export class GoblinLeader extends BaseBoss {
         super(enemyType, id, bossData, spawnEnemyCallback, spawnProjectileCallback);
     }
 
-    protected override useAbility(ability: string, playerPosition: PIXI.Point): void {
+    protected override useAbility(ability: string, player: import('../Player').Player): void {
         if (ability === 'summon_goblin' && this.abilityCooldowns.get(ability)! <= 0) {
             console.log(`${this.stats.name} uses Summon Goblin!`);
 

@@ -46,8 +46,7 @@ export class SceneManager {
             case StageType.EVENT:
                 newScene = new EventScene();
                 break;
-            // A special case for the main menu/stage select
-            case 'system_scene' as any: // Using 'as any' to handle a non-standard type
+            case StageType.SYSTEM:
                  newScene = new StageSelectScene();
                  break;
             default:
