@@ -1,7 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { InputManager } from '../core/InputManager';
+import { SoundManager } from '../core/SoundManager';
 import { Backpack } from './Backpack';
 import { ItemData } from './data/ItemData';
+import { PlayerData } from '../core/PlayerData';
 
 export class Player extends PIXI.Sprite {
     // Player Stats
@@ -15,6 +17,13 @@ export class Player extends PIXI.Sprite {
     public level: number = 1;
     public experience: number = 0;
     public experienceToNextLevel: number = 100;
+
+    // Invincibility
+    private isInvincible: boolean = false;
+    private invincibilityTimer: number = 0;
+    private readonly invincibilityDuration: number = 2; // in seconds
+    private readonly flashInterval: number = 0.1; // in seconds
+    private flashTimer: number = 0;
 
     public backpack: Backpack;
 
@@ -38,9 +47,12 @@ export class Player extends PIXI.Sprite {
                     console.log(`Damage multiplier increased to ${this.damageMultiplier}`);
                     break;
                 case 'backpack_expand':
-                    const { width, height } = effect.value;
-                    this.backpack.expandGrid(height, width);
-                    console.log(`Backpack expanded by ${width}x${height}`);
+                    // This is now handled by collecting fragments
+                    const playerData = PlayerData.getInstance();
+                    if (playerData.addBackpackFragment()) {
+                        // Optionally, play a sound or show an effect on successful expansion
+                        SoundManager.playSfx('sfx_level_up', 1.1); // Reuse level up sound
+                    }
                     break;
                 case 'add_weapon':
                     // This will be handled by the WeaponManager,
@@ -71,11 +83,24 @@ export class Player extends PIXI.Sprite {
     }
 
     public takeDamage(amount: number): void {
+        if (this.isInvincible) {
+            return;
+        }
+
         this.currentHealth -= amount;
         if (this.currentHealth < 0) {
             this.currentHealth = 0;
-            // Handle player death
         }
+
+        console.log(`Player took ${amount} damage, health is now ${this.currentHealth}`);
+
+        // Start invincibility
+        this.isInvincible = true;
+        this.invincibilityTimer = this.invincibilityDuration;
+        this.flashTimer = this.flashInterval;
+        this.alpha = 0.5; // Start flashing
+
+        SoundManager.playSfx('sfx_player_hit', 0.8);
     }
 
     public isDead(): boolean {
@@ -108,5 +133,21 @@ export class Player extends PIXI.Sprite {
 
         this.x += dx * this.speed * delta;
         this.y += dy * this.speed * delta;
+
+        // Handle invincibility timer and flashing
+        if (this.isInvincible) {
+            this.invincibilityTimer -= delta / 60; // Assuming 60 FPS
+            this.flashTimer -= delta / 60;
+
+            if (this.flashTimer <= 0) {
+                this.alpha = this.alpha === 1.0 ? 0.5 : 1.0;
+                this.flashTimer = this.flashInterval;
+            }
+
+            if (this.invincibilityTimer <= 0) {
+                this.isInvincible = false;
+                this.alpha = 1.0; // Reset alpha
+            }
+        }
     }
 }
