@@ -3,6 +3,7 @@
 import * as PIXI from 'pixi.js';
 import { IScene } from '../../core/IScene';
 import { SceneManager } from '../../core/SceneManager';
+import { SoundManager } from '../../core/SoundManager';
 import { StageSelectScene } from './StageSelectScene';
 import { PlayerData } from '../../core/PlayerData';
 import { eventDatabase, EventChoice, EventData } from '../data/EventData';
@@ -76,7 +77,10 @@ export class EventScene implements IScene {
 
             button.interactive = true;
             button.cursor = 'pointer';
-            button.on('pointertap', () => this.handleChoice(choice));
+            button.on('pointertap', () => {
+                SoundManager.playSfx('sfx_ui_click', 0.7);
+                this.handleChoice(choice);
+            });
 
             this.container.addChild(button);
         });
@@ -140,7 +144,10 @@ export class EventScene implements IScene {
         continueButton.y = screen.height - 150;
         continueButton.interactive = true;
         continueButton.cursor = 'pointer';
-        continueButton.on('pointertap', () => SceneManager.changeScene('stage_select'));
+        continueButton.on('pointertap', () => {
+            SoundManager.playSfx('sfx_ui_click', 0.7);
+            SceneManager.changeScene('stage_select');
+        });
 
         this.container.addChild(continueButton);
     }

@@ -3,6 +3,7 @@
 import * as PIXI from 'pixi.js';
 import { IScene } from '../../core/IScene';
 import { SceneManager } from '../../core/SceneManager';
+import { SoundManager } from '../../core/SoundManager';
 import { StageSelectScene } from './StageSelectScene';
 import { PlayerData } from '../../core/PlayerData';
 import { itemDatabase } from '../data/Items';
@@ -63,7 +64,10 @@ export class ShopScene implements IScene {
         backButton.y = screen.height - 60;
         backButton.interactive = true;
         backButton.cursor = 'pointer';
-        backButton.on('pointertap', () => SceneManager.changeScene('stage_select'));
+        backButton.on('pointertap', () => {
+            SoundManager.playSfx('sfx_ui_click', 0.7);
+            SceneManager.changeScene('stage_select');
+        });
         this.container.addChild(backButton);
     }
 
@@ -88,7 +92,10 @@ export class ShopScene implements IScene {
             priceText.anchor.set(0.5);
             priceText.position.set(shopX + itemCard.width / 2, shopY + itemCard.height + 20);
 
-            itemCard.on('pointertap', () => this.purchaseItem(shopItem));
+            itemCard.on('pointertap', () => {
+                SoundManager.playSfx('sfx_ui_click', 0.7);
+                this.purchaseItem(shopItem);
+            });
             this.container.addChild(itemCard, priceText);
 
             shopX += itemCard.width + 40;
@@ -121,7 +128,10 @@ export class ShopScene implements IScene {
             priceText.anchor.set(0.5);
             priceText.position.set(sellX + itemCard.width / 2, sellY + itemCard.height + 20);
 
-            itemCard.on('pointertap', () => this.sellItem(item, sellPrice));
+            itemCard.on('pointertap', () => {
+                SoundManager.playSfx('sfx_ui_click', 0.7);
+                this.sellItem(item, sellPrice);
+            });
             this.container.addChild(itemCard, priceText);
 
             sellX += itemCard.width + 40;

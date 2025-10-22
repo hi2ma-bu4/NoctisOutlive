@@ -124,7 +124,10 @@ export class CollisionManager {
         if (typeA === CollidableType.Projectile && typeB === CollidableType.Enemy) {
             this.weaponManager.registerHit(idA, idB);
         } else if (typeA === CollidableType.Player && typeB === CollidableType.Enemy) {
-            // Future implementation: player taking damage
+            const enemy = this.enemyManager.getEnemyById(idB);
+            if (enemy) {
+                this.player.takeDamage(enemy.damage);
+            }
         } else if (typeA === CollidableType.Player && typeB === CollidableType.ExperienceOrb) {
             this.experienceManager.collectOrb(idB);
         } else if (typeA === CollidableType.Player && typeB === CollidableType.TreasureChest) {

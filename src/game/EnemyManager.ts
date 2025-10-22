@@ -24,6 +24,7 @@ export class EnemyManager {
     private treasureManager: TreasureManager;
     private stageTimer: number = 0;
     private enemyIdCounter: number = 0;
+    private projectileIdCounter: number = 0;
     private isBossActive: boolean = false;
 
     private enemySpawnQueue: EnemySpawn[];
@@ -173,7 +174,7 @@ export class EnemyManager {
     }
 
     public spawnBossProjectile(position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) {
-        const texture = AssetManager.getTexture('enemy-bat'); // Placeholder
+        const texture = AssetManager.getTexture('projectile');
         if (!texture) {
             console.error('Boss projectile texture not found.');
             return;
@@ -213,5 +214,9 @@ export class EnemyManager {
 
     public getEnemies(): (BaseEnemy | BaseBoss)[] {
         return this.enemies;
+    }
+
+    public getEnemyById(id: number): BaseEnemy | BaseBoss | undefined {
+        return this.enemies.find(enemy => enemy.id === id);
     }
 }

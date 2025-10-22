@@ -8,6 +8,7 @@ export class BaseEnemy extends PIXI.Sprite {
     public id: number;
     public stats: EnemyStats;
     public health: number;
+    public damage: number;
 
     constructor(enemyType: string, id: number) {
         const stats = EnemyDatabase[enemyType];
@@ -25,6 +26,7 @@ export class BaseEnemy extends PIXI.Sprite {
         this.id = id;
         this.stats = { ...stats }; // Create a copy of the stats
         this.health = this.stats.health;
+        this.damage = this.stats.attack;
 
         this.anchor.set(0.5);
         this.scale.set(this.stats.scale);
