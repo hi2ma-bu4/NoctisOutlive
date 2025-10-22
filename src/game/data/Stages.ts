@@ -6,7 +6,7 @@ export const Stages: StageData[] = [
     {
         id: 'stage_select',
         name: 'Stage Select',
-        type: StageType.SYSTEM_SCENE,
+        type: StageType.SYSTEM,
         description: 'Choose your next destination.',
         background: 'background_menu',
         music: 'music_menu',

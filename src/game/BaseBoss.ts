@@ -35,11 +35,11 @@ export abstract class BaseBoss extends BaseEnemy {
         });
     }
 
-    public override update(delta: number, playerPosition: PIXI.Point): void {
-        super.update(delta, playerPosition);
+    public override update(delta: number, player: import('./Player').Player): void {
+        super.update(delta, player);
 
-        this.updateAI(delta, playerPosition);
-        this.updateAbilities(delta, playerPosition);
+        this.updateAI(delta, player);
+        this.updateAbilities(delta, player);
         this.checkPhaseTransition();
     }
 
@@ -47,7 +47,7 @@ export abstract class BaseBoss extends BaseEnemy {
      * Updates the boss's main AI behavior based on its aiType.
      * This can be overridden by specific boss implementations for more unique patterns.
      */
-    protected updateAI(delta: number, playerPosition: PIXI.Point): void {
+    protected updateAI(delta: number, player: import('./Player').Player): void {
         switch (this.bossData.aiType) {
             case 'charger':
                 // Example: Charge at the player periodically
@@ -65,12 +65,12 @@ export abstract class BaseBoss extends BaseEnemy {
     /**
      * Updates and potentially triggers special abilities.
      */
-    protected updateAbilities(delta: number, playerPosition: PIXI.Point): void {
+    protected updateAbilities(delta: number, player: import('./Player').Player): void {
         this.abilityCooldowns.forEach((cooldown, ability) => {
             if (cooldown > 0) {
                 this.abilityCooldowns.set(ability, cooldown - delta);
             } else {
-                this.useAbility(ability, playerPosition);
+                this.useAbility(ability, player);
                 // Reset cooldown (this should be defined per-ability)
                 this.abilityCooldowns.set(ability, 10 * 60); // e.g., 10 seconds
             }
@@ -81,7 +81,7 @@ export abstract class BaseBoss extends BaseEnemy {
      * Placeholder for using a special ability.
      * To be implemented by specific boss classes.
      */
-    protected abstract useAbility(ability: string, playerPosition: PIXI.Point): void;
+    protected abstract useAbility(ability: string, player: import('./Player').Player): void;
 
     /**
      * Checks if the boss should transition to a new phase (e.g., "enrage" mode).

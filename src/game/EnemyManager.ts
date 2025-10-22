@@ -47,7 +47,7 @@ export class EnemyManager {
         this.bossSpawnQueue = [...stageData.bosses].sort((a, b) => a.spawnTime - b.spawnTime);
     }
 
-    public update(delta: number, player: Player) {
+    public update(delta: number, player: import('../game/Player').Player) {
         this.stageTimer += delta / 60; // Convert delta frames to seconds
 
         // Update boss projectiles
@@ -94,7 +94,7 @@ export class EnemyManager {
         let bossCount = 0;
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
-            enemy.update(delta, player.position);
+            enemy.update(delta, player);
 
             if (enemy.isDead()) {
                 const wasBoss = enemy instanceof BaseBoss;

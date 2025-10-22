@@ -21,28 +21,28 @@ export class OrcChieftain extends BaseBoss {
         this.chargeSpeed = this.stats.speed * 3;
     }
 
-    public override update(delta: number, playerPosition: PIXI.Point): void {
+    public override update(delta: number, player: import('../Player').Player): void {
         if (this.chargeDuration > 0) {
             this.chargeDuration -= delta;
             // The actual movement is handled by the velocity set during the charge ability
         } else {
             // Revert to normal speed and behavior
             this.velocity.set(0, 0);
-            super.update(delta, playerPosition);
+            super.update(delta, player);
         }
     }
 
-    protected override useAbility(ability: string, playerPosition: PIXI.Point): void {
+    protected override useAbility(ability: string, player: import('../Player').Player): void {
         switch (ability) {
             case 'charge':
                 if (this.abilityCooldowns.get(ability)! <= 0) {
-                    this.charge(playerPosition);
+                    this.charge(player.position);
                     this.abilityCooldowns.set(ability, this.chargeCooldown);
                 }
                 break;
             case 'stomp':
                 if (this.abilityCooldowns.get(ability)! <= 0) {
-                    this.stomp();
+                    this.stomp(player);
                     this.abilityCooldowns.set(ability, this.stompCooldown);
                 }
                 break;
@@ -60,10 +60,17 @@ export class OrcChieftain extends BaseBoss {
         this.chargeDuration = 2 * 60; // Charge for 2 seconds
     }
 
-    private stomp(): void {
+    private stomp(player: import('../Player').Player): void {
         console.log(`${this.stats.name} uses Stomp!`);
-        EffectManager.createCircularShockwave(this.position, 150);
-        // This is where you would add logic to damage the player if they are within the shockwave radius.
-        // For example, by notifying the CollisionManager.
+        const shockwaveRadius = 150;
+        EffectManager.createCircularShockwave(this.position, shockwaveRadius);
+
+        const distance = Math.sqrt(
+            Math.pow(this.x - player.x, 2) + Math.pow(this.y - player.y, 2)
+        );
+
+        if (distance <= shockwaveRadius) {
+            player.takeDamage(this.damage);
+        }
     }
 }
