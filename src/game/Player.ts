@@ -70,6 +70,17 @@ export class Player extends PIXI.Sprite {
         console.log(`Player leveled up to level ${this.level}! Next level at ${this.experienceToNextLevel} exp.`);
     }
 
+    public takeDamage(amount: number): void {
+        this.currentHealth -= amount;
+        if (this.currentHealth < 0) {
+            this.currentHealth = 0;
+            // Handle player death
+        }
+    }
+
+    public isDead(): boolean {
+        return this.currentHealth <= 0;
+    }
 
     public update(delta: number) {
         let dx = 0;

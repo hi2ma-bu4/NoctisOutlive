@@ -50,6 +50,24 @@ export const Stages: StageData[] = [
         ],
     },
 
+    // New High-Difficulty Stage
+    {
+        id: 'stage_hard_2',
+        name: 'Volcanic Peak',
+        type: StageType.HIGH_DIFFICULTY,
+        description: 'An unforgiving stage with powerful new foes.',
+        background: 'background_wastes', // Placeholder
+        music: 'music_stage_hard', // Placeholder
+        enemies: [
+            { enemyType: 'hellhound', spawnTime: 0, spawnCount: 15 },
+            { enemyType: 'golem', spawnTime: 45, spawnCount: 10 },
+            { enemyType: 'hellhound', spawnTime: 90, spawnCount: 20 },
+        ],
+        bosses: [
+            { bossType: 'hydra', spawnTime: 600, isMidBoss: false, aiType: 'default', healthMultiplier: 1.0, abilities: ['multi-attack', 'regenerate'] },
+        ],
+    },
+
     // Shop Stage
     {
         id: 'shop_1',

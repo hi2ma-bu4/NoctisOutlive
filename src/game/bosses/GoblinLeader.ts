@@ -6,8 +6,14 @@ import * as PIXI from 'pixi.js';
 export class GoblinLeader extends BaseBoss {
     private summonCooldown: number = 10 * 60; // 10 seconds
 
-    constructor(enemyType: string, id: number, bossData: BossSpawn, spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void) {
-        super(enemyType, id, bossData, spawnEnemyCallback);
+    constructor(
+        enemyType: string,
+        id: number,
+        bossData: BossSpawn,
+        spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void,
+        spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void
+    ) {
+        super(enemyType, id, bossData, spawnEnemyCallback, spawnProjectileCallback);
     }
 
     protected override useAbility(ability: string, playerPosition: PIXI.Point): void {

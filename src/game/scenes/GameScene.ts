@@ -13,11 +13,13 @@ import { BackpackScreen } from '../ui/BackpackScreen';
 import { IReward, RewardManager } from '../../core/RewardManager';
 import { InputManager } from '../../core/InputManager';
 import { PlayerData } from '../../core/PlayerData';
+import { GameOverScreen } from '../ui/GameOverScreen';
 
 enum GameState {
     PLAYING,
     PAUSED,
     REWARD,
+    GAME_OVER,
 }
 
 export class GameScene implements IScene {
@@ -122,6 +124,19 @@ export class GameScene implements IScene {
         this.treasureManager.update(delta.deltaTime, this.player);
         this.collisionManager.update();
         UIManager.updateGameHUD(this.player, this.stageTimer);
+
+        if (this.player.isDead()) {
+            this.handlePlayerDeath();
+        }
+    }
+
+    private handlePlayerDeath(): void {
+        if (this.state === GameState.GAME_OVER) return; // Prevent multiple calls
+        this.state = GameState.GAME_OVER;
+        console.log("Player has died. Game Over.");
+
+        const gameOverScreen = new GameOverScreen();
+        UIManager.container.addChild(gameOverScreen);
     }
 
     public destroy(): void {
