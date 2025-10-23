@@ -2,8 +2,16 @@
 
 export const imageAssets = [
     {
+        "alias": "background-volcanic",
+        "src": "assets/images/background-volcanic.png"
+    },
+    {
         "alias": "boss-goblin-shaman",
         "src": "assets/images/boss-goblin-shaman.png"
+    },
+    {
+        "alias": "boss-hydra",
+        "src": "assets/images/boss-hydra.png"
     },
     {
         "alias": "boss-lich",
@@ -24,6 +32,14 @@ export const imageAssets = [
     {
         "alias": "enemy-ghost",
         "src": "assets/images/enemy-ghost.png"
+    },
+    {
+        "alias": "enemy-golem",
+        "src": "assets/images/enemy-golem.png"
+    },
+    {
+        "alias": "enemy-hellhound",
+        "src": "assets/images/enemy-hellhound.png"
     },
     {
         "alias": "enemy-slime",

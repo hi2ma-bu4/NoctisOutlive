@@ -66,6 +66,7 @@ export class GameScene implements IScene {
         this.enemyManager = new EnemyManager(this.container, this.experienceManager, this.treasureManager);
         this.weaponManager = new WeaponManager(this.container, this.enemyManager);
         this.collisionManager = new CollisionManager(this.player, this.enemyManager, this.weaponManager, this.experienceManager, this.treasureManager);
+        this.enemyManager.setCollisionManager(this.collisionManager);
 
         // Add backpack to UI
         this.player.backpack.x = screen.width - this.player.backpack.width - 20;
