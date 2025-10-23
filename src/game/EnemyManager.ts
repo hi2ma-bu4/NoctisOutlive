@@ -3,9 +3,7 @@
 import * as PIXI from 'pixi.js';
 import { BaseEnemy } from './BaseEnemy';
 import { BaseBoss } from './BaseBoss';
-import { GoblinLeader } from './bosses/GoblinLeader';
-import { OrcChieftain } from './bosses/OrcChieftain';
-import { HydraBoss } from './bosses/HydraBoss';
+import { GenericBoss } from './GenericBoss';
 import { ExperienceManager } from './ExperienceManager';
 import { TreasureManager } from './TreasureManager';
 import { EffectManager } from '../core/EffectManager';
@@ -22,6 +20,7 @@ export class EnemyManager {
     private container: PIXI.Container;
     private experienceManager: ExperienceManager;
     private treasureManager: TreasureManager;
+    private collisionManager: import('../core/CollisionManager').CollisionManager | null = null;
     private stageTimer: number = 0;
     private enemyIdCounter: number = 0;
     private projectileIdCounter: number = 0;
@@ -45,6 +44,10 @@ export class EnemyManager {
         // Clone the arrays to not modify the original data
         this.enemySpawnQueue = [...stageData.enemies].sort((a, b) => a.spawnTime - b.spawnTime);
         this.bossSpawnQueue = [...stageData.bosses].sort((a, b) => a.spawnTime - b.spawnTime);
+    }
+
+    public setCollisionManager(collisionManager: import('../core/CollisionManager').CollisionManager) {
+        this.collisionManager = collisionManager;
     }
 
     public update(delta: number, player: import('../game/Player').Player) {
@@ -186,30 +189,27 @@ export class EnemyManager {
     }
 
     private spawnBoss(bossInfo: BossSpawn) {
-        let boss: BaseBoss;
         const spawnCallback = this.spawnEnemy.bind(this);
         const projectileCallback = this.spawnBossProjectile.bind(this);
 
-        switch (bossInfo.bossType) {
-            case 'goblin_leader':
-                boss = new GoblinLeader(bossInfo.bossType, this.enemyIdCounter++, bossInfo, spawnCallback, projectileCallback);
-                break;
-            case 'orc_chieftain':
-                boss = new OrcChieftain(bossInfo.bossType, this.enemyIdCounter++, bossInfo, spawnCallback, projectileCallback);
-                break;
-            case 'hydra':
-                boss = new HydraBoss(bossInfo.bossType, this.enemyIdCounter++, bossInfo, spawnCallback, projectileCallback);
-                break;
-            default:
-                console.error(`Unknown boss type: ${bossInfo.bossType}. No fallback implemented.`);
-                return;
+        try {
+            const boss = new GenericBoss(
+                bossInfo.bossType,
+                this.enemyIdCounter++,
+                bossInfo,
+                spawnCallback,
+                projectileCallback,
+                this.collisionManager
+            );
+
+            this.setupEnemyPosition(boss);
+            this.enemies.push(boss);
+            this.container.addChild(boss);
+
+            UIManager.showBossHUD(boss.stats.name);
+        } catch (error) {
+            console.error(`Failed to spawn boss of type '${bossInfo.bossType}':`, error);
         }
-
-        this.setupEnemyPosition(boss);
-        this.enemies.push(boss);
-        this.container.addChild(boss);
-
-        UIManager.showBossHUD(boss.stats.name);
     }
 
     public getEnemies(): (BaseEnemy | BaseBoss)[] {

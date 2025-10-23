@@ -141,4 +141,19 @@ export class CollisionManager {
         }
         this.isReady = false;
     }
+
+    public stompAttack(position: { x: number; y: number }, radius: number, damage: number): void {
+        const enemies = this.enemyManager.getEnemies();
+        for (const enemy of enemies) {
+            const dx = enemy.x - position.x;
+            const dy = enemy.y - position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < radius) {
+                // This is a simple radial damage application.
+                // It doesn't account for line of sight or other factors.
+                this.player.takeDamage(damage);
+            }
+        }
+    }
 }

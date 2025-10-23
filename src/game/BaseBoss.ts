@@ -7,8 +7,10 @@ import * as PIXI from 'pixi.js';
 export abstract class BaseBoss extends BaseEnemy {
     protected bossData: BossSpawn;
     protected spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void;
+    protected collisionManager: import('../core/CollisionManager').CollisionManager | null = null;
     private abilityCooldowns: Map<string, number> = new Map();
     private phase: number = 1;
+    public regenerationRate: number = 0; // Health per second
 
     protected spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void;
 
@@ -18,16 +20,18 @@ export abstract class BaseBoss extends BaseEnemy {
         bossData: BossSpawn,
         // Optional callback to allow bosses to spawn minions
         spawnEnemyCallback: (enemyType: string, position: PIXI.Point) => void = () => {},
-        spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void = () => {}
+        spawnProjectileCallback: (position: PIXI.Point, direction: PIXI.Point, damage: number, speed: number, lifespan: number) => void = () => {},
+        collisionManager: import('../core/CollisionManager').CollisionManager | null = null
     ) {
         super(enemyType, id);
         this.bossData = bossData;
         this.spawnEnemyCallback = spawnEnemyCallback;
         this.spawnProjectileCallback = spawnProjectileCallback;
+        this.collisionManager = collisionManager;
 
         // Apply health multiplier
         this.stats.health *= this.bossData.healthMultiplier;
-        this.currentHealth = this.stats.health;
+        this.health = this.stats.health;
 
         // Initialize ability cooldowns
         this.bossData.abilities.forEach(ability => {
@@ -37,6 +41,14 @@ export abstract class BaseBoss extends BaseEnemy {
 
     public override update(delta: number, player: import('./Player').Player): void {
         super.update(delta, player);
+
+        // Apply passive regeneration
+        if (this.regenerationRate > 0 && this.health < this.stats.health) {
+            this.health += this.regenerationRate * (delta / 60); // Assuming 60 FPS
+            if (this.health > this.stats.health) {
+                this.health = this.stats.health;
+            }
+        }
 
         this.updateAI(delta, player);
         this.updateAbilities(delta, player);
@@ -87,7 +99,7 @@ export abstract class BaseBoss extends BaseEnemy {
      * Checks if the boss should transition to a new phase (e.g., "enrage" mode).
      */
     private checkPhaseTransition(): void {
-        if (this.phase === 1 && this.currentHealth / this.stats.health < 0.5) {
+        if (this.phase === 1 && this.health / this.stats.health < 0.5) {
             this.phase = 2;
             this.onPhaseTransition(2);
         }
@@ -102,5 +114,13 @@ export abstract class BaseBoss extends BaseEnemy {
         // Example: increase speed and damage
         this.stats.speed *= 1.5;
         this.stats.damage *= 1.2;
+    }
+
+    public getCurrentHealth(): number {
+        return this.health;
+    }
+
+    public getMaxHealth(): number {
+        return this.stats.health;
     }
 }

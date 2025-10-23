@@ -56,7 +56,7 @@ export const Stages: StageData[] = [
         name: 'Volcanic Peak',
         type: StageType.HIGH_DIFFICULTY,
         description: 'An unforgiving stage with powerful new foes.',
-        background: 'background_wastes', // Placeholder
+        background: 'background-volcanic',
         music: 'music_stage_hard', // Placeholder
         enemies: [
             { enemyType: 'hellhound', spawnTime: 0, spawnCount: 15 },
